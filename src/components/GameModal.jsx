@@ -12,7 +12,7 @@ import {
   RotateCw,
   ExternalLink,
 } from 'lucide-react';
-import { setUserRating, getStoredUserRatings } from '../utils/storage';
+import { setUserRating, getStoredUserRatings, extractIframeUrl } from '../utils/storage';
 
 export const GameModal = ({
   game,
@@ -160,7 +160,7 @@ export const GameModal = ({
           <div className="w-full aspect-[16/9] max-h-[620px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative bg-black">
             <iframe
               key={iframeKey}
-              src={game.iframeUrl || 'about:blank'}
+              src={extractIframeUrl(game.iframeUrl) || 'about:blank'}
               title={game.title}
               onLoad={() => setIsLoading(false)}
               className="w-full h-full border-none"

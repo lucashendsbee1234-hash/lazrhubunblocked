@@ -11,6 +11,8 @@ import { TagFilter } from './components/TagFilter';
 import { GameGrid } from './components/GameGrid';
 import { GameModal } from './components/GameModal';
 import { Footer } from './components/Footer';
+import { AuthModal } from './components/AuthModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 
 import {
   getStoredFavorites,
@@ -18,7 +20,15 @@ import {
   getStoredRecentlyPlayed,
   recordGamePlay,
   getStoredCustomGames,
+  getStoredAllGamesOverride,
+  saveAllGamesOverride,
+  getStoredAnnouncement,
+  saveStoredAnnouncement,
+  getStoredUserAuth,
+  saveStoredUserAuth,
+  ADMIN_EMAIL,
 } from './utils/storage';
+import { Megaphone, X } from 'lucide-react';
 
 export default function App() {
   const [games, setGames] = useState([]);
@@ -35,15 +45,93 @@ export default function App() {
 
   const [activeGame, setActiveGame] = useState(null);
 
+  // Authentication & Admin state
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
+
   // Load initial data and localStorage state
   useEffect(() => {
-    const customGames = getStoredCustomGames();
-    const allGamesList = [...initialGamesData, ...customGames];
-    setGames(allGamesList);
+    // Games catalog
+    const override = getStoredAllGamesOverride();
+    if (override && Array.isArray(override) && override.length > 0) {
+      setGames(override);
+    } else {
+      const customGames = getStoredCustomGames();
+      const allGamesList = [...initialGamesData, ...customGames];
+      setGames(allGamesList);
+    }
 
+    // Favorites & History
     setFavorites(getStoredFavorites());
     setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => item.gameId));
+
+    // Auth & Announcement
+    const storedUser = getStoredUserAuth();
+    if (storedUser) {
+      // Re-verify if email is admin email
+      if (storedUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        storedUser.role = 'admin';
+      }
+      setCurrentUser(storedUser);
+    }
+    setAnnouncement(getStoredAnnouncement());
   }, []);
+
+  // Update persistent game catalog whenever games list is modified
+  const syncGamesCatalog = (newList) => {
+    setGames(newList);
+    saveAllGamesOverride(newList);
+  };
+
+  // Auth Handlers
+  const handleSignIn = (user) => {
+    setCurrentUser(user);
+    saveStoredUserAuth(user);
+    if (user.role === 'admin') {
+      setIsAdminPanelOpen(true);
+    }
+  };
+
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    saveStoredUserAuth(null);
+    setIsAdminPanelOpen(false);
+  };
+
+  // Admin Game Management Handlers
+  const handleAddGame = (newGame) => {
+    const updated = [newGame, ...games];
+    syncGamesCatalog(updated);
+  };
+
+  const handleUpdateGame = (updatedGame) => {
+    const updated = games.map((g) => (g.id === updatedGame.id ? updatedGame : g));
+    syncGamesCatalog(updated);
+  };
+
+  const handleDeleteGame = (gameId) => {
+    const updated = games.filter((g) => g.id !== gameId);
+    syncGamesCatalog(updated);
+  };
+
+  const handleToggleFeatured = (gameId) => {
+    const updated = games.map((g) =>
+      g.id === gameId ? { ...g, isFeatured: !g.isFeatured } : g
+    );
+    syncGamesCatalog(updated);
+  };
+
+  const handleSaveAnnouncement = (text) => {
+    setAnnouncement(text);
+    saveStoredAnnouncement(text);
+  };
+
+  const handleResetCatalog = () => {
+    setGames(initialGamesData);
+    saveAllGamesOverride(initialGamesData);
+  };
 
   // Keyboard Shortcuts for Search Bar
   useEffect(() => {
@@ -76,7 +164,7 @@ export default function App() {
 
     // Increment play count locally
     setGames((prev) =>
-      prev.map((g) => (g.id === game.id ? { ...g, plays: g.plays + 1 } : g))
+      prev.map((g) => (g.id === game.id ? { ...g, plays: (g.plays || 0) + 1 } : g))
     );
   }, []);
 
@@ -193,7 +281,7 @@ export default function App() {
   }, [games, handlePlayGame]);
 
   const featuredGame = useMemo(() => {
-    return games.find((g) => g.featured) || games[0];
+    return games.find((g) => g.isFeatured || g.featured) || games[0];
   }, [games]);
 
   const relatedGames = useMemo(() => {
@@ -205,6 +293,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans antialiased selection:bg-purple-600 selection:text-white transition-colors">
+      {/* Site Announcement Banner */}
+      {announcement && (
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 border-b border-purple-500/30 px-4 py-2 text-center text-xs font-extrabold text-purple-200 flex items-center justify-center space-x-2 relative">
+          <Megaphone className="w-4 h-4 text-purple-400 shrink-0" />
+          <span>{announcement}</span>
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => handleSaveAnnouncement('')}
+              className="p-1 rounded hover:bg-purple-800/50 text-purple-400 hover:text-white ml-2"
+              title="Dismiss Announcement"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header Navbar */}
       <Header
         searchQuery={searchQuery}
@@ -214,6 +319,10 @@ export default function App() {
           setShowingFavoritesOnly(!showingFavoritesOnly);
           setShowingRecentlyPlayedOnly(false);
         }}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Container */}
@@ -306,6 +415,30 @@ export default function App() {
           onSelectGame={(g) => handlePlayGame(g)}
         />
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSignIn={handleSignIn}
+      />
+
+      {/* Admin Panel Modal */}
+      <AdminPanelModal
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
+        games={games}
+        onAddGame={handleAddGame}
+        onUpdateGame={handleUpdateGame}
+        onDeleteGame={handleDeleteGame}
+        onToggleFeatured={handleToggleFeatured}
+        announcement={announcement}
+        onSaveAnnouncement={handleSaveAnnouncement}
+        onResetCatalog={handleResetCatalog}
+        categories={categoriesData}
+      />
 
       {/* Footer */}
       <Footer />

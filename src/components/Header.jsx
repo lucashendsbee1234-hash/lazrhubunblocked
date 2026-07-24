@@ -3,6 +3,11 @@ import {
   Search,
   Heart,
   MessageSquarePlus,
+  UserCheck,
+  LogIn,
+  LogOut,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 
 export const Header = ({
@@ -10,7 +15,13 @@ export const Header = ({
   onSearchChange,
   favoritesCount,
   onOpenFavorites,
+  currentUser,
+  onOpenAuth,
+  onOpenAdminPanel,
+  onSignOut,
 }) => {
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-slate-950/90 border-b border-purple-900/40 shadow-lg shadow-purple-950/20 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
@@ -55,10 +66,10 @@ export const Header = ({
             href="https://docs.google.com/forms/d/e/1FAIpQLSeZiD1iZLf-ZJeE85R-X9uypDfmg4Ig46XEvDVRK276XKxnHg/viewform?usp=publish-editor"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs flex items-center space-x-1.5 transition-all border border-purple-400/30 shadow-lg shadow-purple-600/30"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 font-bold text-xs flex items-center space-x-1.5 transition-all border border-purple-500/30"
             title="Request a Game"
           >
-            <MessageSquarePlus className="w-4 h-4 text-purple-200" />
+            <MessageSquarePlus className="w-4 h-4 text-purple-300" />
             <span className="hidden sm:inline">Request a Game</span>
           </a>
 
@@ -76,8 +87,57 @@ export const Header = ({
               </span>
             )}
           </button>
+
+          {/* User / Admin Authentication State */}
+          {currentUser ? (
+            <div className="flex items-center space-x-1.5">
+              {isAdmin ? (
+                /* Admin Profile Tab Button */
+                <button
+                  onClick={onOpenAdminPanel}
+                  className="p-2 sm:px-3 sm:py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center space-x-2 shadow-lg shadow-purple-600/30 border border-purple-400/40 transition-all transform active:scale-95"
+                  title="Admin Control Panel & Profile"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-300" />
+                  <span className="hidden sm:inline">Admin Profile</span>
+                  <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-black text-[9px] uppercase tracking-wider">
+                    ADMIN
+                  </span>
+                </button>
+              ) : (
+                /* Standard User Profile Button */
+                <button
+                  onClick={onOpenAdminPanel}
+                  className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-xs flex items-center space-x-1.5 border border-purple-900/40"
+                >
+                  <UserCheck className="w-4 h-4 text-purple-400" />
+                  <span className="hidden sm:inline">{currentUser.name || currentUser.email}</span>
+                </button>
+              )}
+
+              {/* Quick Sign Out Button */}
+              <button
+                onClick={onSignOut}
+                className="p-2 sm:p-2 rounded-xl bg-slate-900 hover:bg-red-950/70 hover:border-red-500/50 text-slate-400 hover:text-red-300 transition-colors border border-purple-900/40"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            /* Sign In Button */
+            <button
+              onClick={onOpenAuth}
+              className="p-2 sm:px-3.5 sm:py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs flex items-center space-x-1.5 shadow-lg shadow-purple-600/30 transition-all border border-purple-400/30"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
   );
 };
+
+

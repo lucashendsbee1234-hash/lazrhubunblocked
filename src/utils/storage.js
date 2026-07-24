@@ -2,6 +2,21 @@ const FAVORITES_KEY = 'unblocked_vault_favorites';
 const RECENTLY_PLAYED_KEY = 'unblocked_vault_recently_played';
 const RATINGS_KEY = 'unblocked_vault_ratings';
 const CUSTOM_GAMES_KEY = 'unblocked_vault_custom_games';
+const ALL_GAMES_OVERRIDE_KEY = 'unblocked_vault_all_games_override';
+const ANNOUNCEMENT_KEY = 'unblocked_vault_announcement';
+const USER_AUTH_KEY = 'unblocked_vault_user_auth';
+
+export const ADMIN_EMAIL = 'lucas.hendsbee1234@gmail.com';
+
+export const extractIframeUrl = (input) => {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  const srcMatch = trimmed.match(/src=["']([^"']+)["']/i);
+  if (srcMatch && srcMatch[1]) {
+    return srcMatch[1].trim();
+  }
+  return trimmed;
+};
 
 export const getStoredFavorites = () => {
   try {
@@ -83,3 +98,58 @@ export const saveCustomGame = (newGame) => {
   }
   return updated;
 };
+
+export const getStoredAllGamesOverride = () => {
+  try {
+    const data = localStorage.getItem(ALL_GAMES_OVERRIDE_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveAllGamesOverride = (gamesList) => {
+  try {
+    localStorage.setItem(ALL_GAMES_OVERRIDE_KEY, JSON.stringify(gamesList));
+  } catch (e) {
+    console.error('Failed to save games override', e);
+  }
+};
+
+export const getStoredAnnouncement = () => {
+  try {
+    return localStorage.getItem(ANNOUNCEMENT_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+export const saveStoredAnnouncement = (text) => {
+  try {
+    localStorage.setItem(ANNOUNCEMENT_KEY, text);
+  } catch (e) {
+    console.error('Failed to save announcement', e);
+  }
+};
+
+export const getStoredUserAuth = () => {
+  try {
+    const data = localStorage.getItem(USER_AUTH_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const saveStoredUserAuth = (user) => {
+  try {
+    if (user) {
+      localStorage.setItem(USER_AUTH_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_AUTH_KEY);
+    }
+  } catch (e) {
+    console.error('Failed to save user auth', e);
+  }
+};
+
