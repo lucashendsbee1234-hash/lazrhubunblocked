@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "games": {
+      "title": "Games Catalog",
+      "description": "Games available for everyone on LAZRHUB",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "iframeUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "rating": { "type": "number" },
+        "plays": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "author": { "type": "string" },
+        "controls": { "type": "string" }
+      },
+      "required": ["title", "iframeUrl"]
+    },
+    "siteSettings": {
+      "title": "Site Settings",
+      "description": "Global configurations including top site announcements",
+      "type": "object",
+      "properties": {
+        "announcement": { "type": "string" }
+      }
+    }
+  }
+}

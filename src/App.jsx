@@ -19,15 +19,18 @@ import {
   toggleStoredFavorite,
   getStoredRecentlyPlayed,
   recordGamePlay,
-  getStoredCustomGames,
-  getStoredAllGamesOverride,
-  saveAllGamesOverride,
-  getStoredAnnouncement,
-  saveStoredAnnouncement,
   getStoredUserAuth,
   saveStoredUserAuth,
   ADMIN_EMAIL,
 } from './utils/storage';
+import {
+  subscribeToGames,
+  saveGameToDb,
+  deleteGameFromDb,
+  resetGamesDbToDefaults,
+  subscribeToAnnouncement,
+  saveAnnouncementToDb,
+} from './utils/firebase';
 import { Megaphone, X } from 'lucide-react';
 
 export default function App() {
@@ -51,26 +54,27 @@ export default function App() {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
-  // Load initial data and localStorage state
+  // Real-time Firestore sync for games and site announcements
   useEffect(() => {
-    // Games catalog
-    const override = getStoredAllGamesOverride();
-    if (override && Array.isArray(override) && override.length > 0) {
-      setGames(override);
-    } else {
-      const customGames = getStoredCustomGames();
-      const allGamesList = [...initialGamesData, ...customGames];
-      setGames(allGamesList);
-    }
+    // 1. Subscribe to games in Firestore (real-time for all connected users)
+    const unsubscribeGames = subscribeToGames((gamesList) => {
+      if (gamesList && gamesList.length > 0) {
+        setGames(gamesList);
+      }
+    });
 
-    // Favorites & History
+    // 2. Subscribe to global announcements in Firestore
+    const unsubscribeAnnouncement = subscribeToAnnouncement((text) => {
+      setAnnouncement(text || '');
+    });
+
+    // 3. Favorites & History from local storage
     setFavorites(getStoredFavorites());
     setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => item.gameId));
 
-    // Auth & Announcement
+    // 4. User Auth from local storage
     const storedUser = getStoredUserAuth();
     if (storedUser) {
-      // Re-verify strictly: only lucas.hendsbee1234@gmail.com authenticated as admin retains admin role
       if (storedUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() && storedUser.role === 'admin') {
         storedUser.role = 'admin';
       } else {
@@ -78,14 +82,12 @@ export default function App() {
       }
       setCurrentUser(storedUser);
     }
-    setAnnouncement(getStoredAnnouncement());
-  }, []);
 
-  // Update persistent game catalog whenever games list is modified
-  const syncGamesCatalog = (newList) => {
-    setGames(newList);
-    saveAllGamesOverride(newList);
-  };
+    return () => {
+      unsubscribeGames();
+      unsubscribeAnnouncement();
+    };
+  }, []);
 
   // Auth Handlers
   const handleSignIn = (user) => {
@@ -102,37 +104,33 @@ export default function App() {
     setIsAdminPanelOpen(false);
   };
 
-  // Admin Game Management Handlers
-  const handleAddGame = (newGame) => {
-    const updated = [newGame, ...games];
-    syncGamesCatalog(updated);
+  // Admin Game Management Handlers (Persisted directly to Firestore so everyone gets live updates)
+  const handleAddGame = async (newGame) => {
+    await saveGameToDb(newGame);
   };
 
-  const handleUpdateGame = (updatedGame) => {
-    const updated = games.map((g) => (g.id === updatedGame.id ? updatedGame : g));
-    syncGamesCatalog(updated);
+  const handleUpdateGame = async (updatedGame) => {
+    await saveGameToDb(updatedGame);
   };
 
-  const handleDeleteGame = (gameId) => {
-    const updated = games.filter((g) => g.id !== gameId);
-    syncGamesCatalog(updated);
+  const handleDeleteGame = async (gameId) => {
+    await deleteGameFromDb(gameId);
   };
 
-  const handleToggleFeatured = (gameId) => {
-    const updated = games.map((g) =>
-      g.id === gameId ? { ...g, isFeatured: !g.isFeatured } : g
-    );
-    syncGamesCatalog(updated);
+  const handleToggleFeatured = async (gameId) => {
+    const target = games.find((g) => g.id === gameId);
+    if (target) {
+      await saveGameToDb({ ...target, isFeatured: !target.isFeatured });
+    }
   };
 
-  const handleSaveAnnouncement = (text) => {
+  const handleSaveAnnouncement = async (text) => {
     setAnnouncement(text);
-    saveStoredAnnouncement(text);
+    await saveAnnouncementToDb(text);
   };
 
-  const handleResetCatalog = () => {
-    setGames(initialGamesData);
-    saveAllGamesOverride(initialGamesData);
+  const handleResetCatalog = async () => {
+    await resetGamesDbToDefaults();
   };
 
   // Keyboard Shortcuts for Search Bar
