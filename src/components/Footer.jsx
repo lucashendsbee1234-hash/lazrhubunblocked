@@ -7,14 +7,14 @@ export const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center space-x-3 text-center md:text-left">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
-              <Gamepad2 className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-purple-500/50 shadow-md shadow-purple-600/30 bg-black flex items-center justify-center">
+              <img src="/logo.png" alt="LAZRHUB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
-              <span className="text-base font-black tracking-tight text-slate-900 dark:text-white block leading-none">
-                LAZR<span className="text-amber-500">HUB</span>
+              <span className="text-base font-black tracking-tight text-white block leading-none">
+                LAZR<span className="text-purple-400">HUB</span>
               </span>
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest block mt-0.5">
+              <span className="text-[10px] font-semibold text-purple-400 uppercase tracking-widest block mt-0.5">
                 Curated Web iFrame Arcade
               </span>
             </div>

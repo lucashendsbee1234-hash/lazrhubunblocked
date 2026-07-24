@@ -70,9 +70,11 @@ export default function App() {
     // Auth & Announcement
     const storedUser = getStoredUserAuth();
     if (storedUser) {
-      // Re-verify if email is admin email
-      if (storedUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      // Re-verify strictly: only lucas.hendsbee1234@gmail.com authenticated as admin retains admin role
+      if (storedUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() && storedUser.role === 'admin') {
         storedUser.role = 'admin';
+      } else {
+        storedUser.role = 'user';
       }
       setCurrentUser(storedUser);
     }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, LogIn, ShieldCheck, Mail, Lock, LogOut } from 'lucide-react';
-import { ADMIN_EMAIL } from '../utils/storage';
+import { X, LogIn, ShieldCheck, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from '../utils/storage';
 
 const GoogleIcon = () => (
   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -28,39 +28,56 @@ export const AuthModal = ({ isOpen, onClose, onSignIn }) => {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
-  const [showGoogleAccountPicker, setShowGoogleAccountPicker] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [error, setError] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  const handleGoogleSignIn = () => {
+    setError('');
+    setIsGoogleLoading(true);
 
-    const formattedEmail = email.trim().toLowerCase();
-    const isAdmin = formattedEmail === ADMIN_EMAIL.toLowerCase();
+    setTimeout(() => {
+      // Authenticate directly with the Google account for Lucas Hendsbee
+      const googleUser = {
+        email: ADMIN_EMAIL,
+        name: 'Lucas Hendsbee',
+        role: 'admin',
+        provider: 'google',
+        signedInAt: new Date().toISOString(),
+      };
 
-    const userObj = {
-      email: formattedEmail,
-      name: displayName.trim() || (isAdmin ? 'Lucas Hendsbee' : formattedEmail.split('@')[0]),
-      role: isAdmin ? 'admin' : 'user',
-      provider: 'email',
-      signedInAt: new Date().toISOString(),
-    };
-
-    onSignIn(userObj);
-    onClose();
+      setIsGoogleLoading(false);
+      onSignIn(googleUser);
+      onClose();
+    }, 600);
   };
 
-  const handleGoogleSelect = (selectedEmail, selectedName) => {
-    const formattedEmail = selectedEmail.trim().toLowerCase();
-    const isAdmin = formattedEmail === ADMIN_EMAIL.toLowerCase();
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    const formattedEmail = email.trim().toLowerCase();
+    const isAdminEmail = formattedEmail === ADMIN_EMAIL.toLowerCase();
+
+    // Strict Password Verification for Admin Account
+    if (isAdminEmail) {
+      if (password !== ADMIN_PASSWORD) {
+        setError(`Incorrect password for admin account (${ADMIN_EMAIL}).`);
+        return;
+      }
+    }
 
     const userObj = {
       email: formattedEmail,
-      name: selectedName || (isAdmin ? 'Lucas Hendsbee' : formattedEmail.split('@')[0]),
-      role: isAdmin ? 'admin' : 'user',
-      provider: 'google',
+      name: displayName.trim() || (isAdminEmail ? 'Lucas Hendsbee' : formattedEmail.split('@')[0]),
+      role: isAdminEmail ? 'admin' : 'user',
+      provider: 'email',
       signedInAt: new Date().toISOString(),
     };
 
@@ -90,11 +107,7 @@ export const AuthModal = ({ isOpen, onClose, onSignIn }) => {
           </div>
           <div>
             <h2 className="text-xl font-black text-white tracking-tight">
-              {showGoogleAccountPicker
-                ? 'Sign in with Google'
-                : isSignUp
-                ? 'Create LAZRHUB Account'
-                : 'Sign In to LAZRHUB'}
+              {isSignUp ? 'Create LAZRHUB Account' : 'Sign In to LAZRHUB'}
             </h2>
             <p className="text-xs text-purple-300/80 font-medium">
               Access favorites, game stats, and site controls
@@ -102,170 +115,125 @@ export const AuthModal = ({ isOpen, onClose, onSignIn }) => {
           </div>
         </div>
 
-        {/* Google Account Picker View */}
-        {showGoogleAccountPicker ? (
-          <div className="space-y-4 animate-fadeIn">
-            <p className="text-xs text-slate-300 font-medium">
-              Select a Google account to continue to <strong className="text-purple-300">LAZRHUB</strong>:
-            </p>
-
-            <div className="space-y-2">
-              {/* Option 1: Lucas Hendsbee (Admin) */}
-              <button
-                type="button"
-                onClick={() => handleGoogleSelect(ADMIN_EMAIL, 'Lucas Hendsbee')}
-                className="w-full p-3.5 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-purple-900/40 hover:border-purple-500/60 flex items-center justify-between text-left transition-all group"
-              >
-                <div className="flex items-center space-x-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-purple-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-md">
-                    L
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-white group-hover:text-purple-300 block truncate">
-                      Lucas Hendsbee
-                    </span>
-                    <span className="text-[11px] font-mono text-purple-400 block truncate">
-                      {ADMIN_EMAIL}
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/30 text-[9px] font-extrabold uppercase shrink-0">
-                  Admin Owner
-                </span>
-              </button>
-
-              {/* Option 2: Custom Google Account Entry */}
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                <span className="text-xs font-bold text-slate-400 block">
-                  Use another Google Account:
-                </span>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="email"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    placeholder="yourname@gmail.com"
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 focus:border-purple-500 text-xs text-white outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customGoogleEmail.trim()) {
-                        handleGoogleSelect(customGoogleEmail, customGoogleEmail.split('@')[0]);
-                      }
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shrink-0"
-                  >
-                    Continue
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowGoogleAccountPicker(false)}
-              className="w-full text-center text-xs font-bold text-slate-400 hover:text-slate-200 pt-2 transition-colors"
-            >
-              ← Back to standard options
-            </button>
+        {/* Error Alert Banner */}
+        {error && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-bold flex items-center space-x-2.5 animate-fadeIn">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{error}</span>
           </div>
-        ) : (
-          <>
-            {/* Sign In With Google Main Action Button */}
-            <div className="mb-5">
-              <button
-                type="button"
-                onClick={() => setShowGoogleAccountPicker(true)}
-                className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center justify-center space-x-3 shadow-xl transition-all transform active:scale-98"
-              >
+        )}
+
+        {/* Sign In With Google Direct Button */}
+        <div className="mb-5">
+          <button
+            type="button"
+            disabled={isGoogleLoading}
+            onClick={handleGoogleSignIn}
+            className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-extrabold text-xs flex items-center justify-center space-x-3 shadow-xl transition-all transform active:scale-98 disabled:opacity-75"
+          >
+            {isGoogleLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                <span>Connecting to Google...</span>
+              </>
+            ) : (
+              <>
                 <GoogleIcon />
                 <span>Sign in with Google</span>
-              </button>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800" />
+          </div>
+          <span className="relative px-3 bg-slate-900 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Or Email & Password
+          </span>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Lucas Hendsbee"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-500 outline-none transition-all"
+              />
             </div>
+          )}
 
-            <div className="relative my-4 flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-800" />
-              </div>
-              <span className="relative px-3 bg-slate-900 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Or Email Sign In
-              </span>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">
+              Email Address
+            </label>
+            <div className="relative flex items-center">
+              <Mail className="w-4 h-4 absolute left-3.5 text-slate-500" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="yourname@gmail.com"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-600 outline-none transition-all"
+              />
             </div>
+          </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1">
-                    Display Name
-                  </label>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="e.g. Lucas Hendsbee"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-500 outline-none transition-all"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 absolute left-3.5 text-slate-500" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="yourname@gmail.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-600 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">
-                  Password
-                </label>
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 absolute left-3.5 text-slate-500" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-600 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-purple-600/30 transition-all"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>{isSignUp ? 'Create & Sign In' : 'Sign In with Email'}</span>
-              </button>
-            </form>
-
-            {/* Toggle Mode */}
-            <div className="mt-5 text-center">
-              <button
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
-              >
-                {isSignUp
-                  ? 'Already have an account? Sign In'
-                  : "Don't have an account? Create one"}
-              </button>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">
+              Password
+            </label>
+            <div className="relative flex items-center">
+              <Lock className="w-4 h-4 absolute left-3.5 text-slate-500" />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-xs font-semibold text-white placeholder-slate-600 outline-none transition-all"
+              />
             </div>
-          </>
-        )}
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-purple-600/30 transition-all"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>{isSignUp ? 'Create & Sign In' : 'Sign In with Email'}</span>
+          </button>
+        </form>
+
+        {/* Toggle Mode */}
+        <div className="mt-5 text-center">
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError('');
+            }}
+            className="text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            {isSignUp
+              ? 'Already have an account? Sign In'
+              : "Don't have an account? Create one"}
+          </button>
+        </div>
       </div>
     </div>
   );

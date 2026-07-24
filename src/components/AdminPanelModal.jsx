@@ -17,6 +17,7 @@ import {
   Tag,
   LayoutGrid,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 
 export const AdminPanelModal = ({
@@ -40,6 +41,9 @@ export const AdminPanelModal = ({
   const [searchCatalogQuery, setSearchCatalogQuery] = useState('');
   const [announcementInput, setAnnouncementInput] = useState(announcement || '');
   const [savedNotice, setSavedNotice] = useState('');
+  const [deletingGameId, setDeletingGameId] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // Form State for Add / Edit Game
   const [formData, setFormData] = useState({
@@ -83,6 +87,7 @@ export const AdminPanelModal = ({
 
   const handleResetForm = () => {
     setEditingGame(null);
+    setFormError('');
     setFormData({
       title: '',
       category: categories[0]?.name || 'Action & Reflex',
@@ -100,9 +105,10 @@ export const AdminPanelModal = ({
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
     const cleanIframeUrl = extractIframeUrl(formData.iframeUrl);
     if (!formData.title.trim() || !cleanIframeUrl) {
-      alert('Please fill in at least the Game Title and a valid iFrame Embed Code or URL.');
+      setFormError('Please fill in at least the Game Title and a valid iFrame Embed Code or URL.');
       return;
     }
 
@@ -273,6 +279,12 @@ export const AdminPanelModal = ({
           {/* TAB 1: ADD / EDIT GAME */}
           {activeTab === 'add' && (
             <form onSubmit={handleFormSubmit} className="space-y-4 max-w-2xl mx-auto">
+              {formError && (
+                <div className="p-3.5 rounded-2xl bg-red-950/90 border border-red-500/60 text-red-200 text-xs font-bold flex items-center space-x-2.5 animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <h3 className="text-sm font-extrabold text-white flex items-center space-x-2">
                   <PlusCircle className="w-4 h-4 text-purple-400" />
@@ -520,18 +532,37 @@ export const AdminPanelModal = ({
                         <Edit3 className="w-4 h-4" />
                       </button>
 
-                      <button
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete "${game.title}"?`)) {
-                            onDeleteGame(game.id);
-                            showFeedback(`Deleted "${game.title}"`);
-                          }
-                        }}
-                        className="p-2 rounded-xl bg-red-950/50 hover:bg-red-900 text-red-400 transition-colors"
-                        title="Delete Game"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {deletingGameId === game.id ? (
+                        <div className="flex items-center space-x-1 bg-red-950/90 p-1 rounded-xl border border-red-500/60 animate-fadeIn shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onDeleteGame(game.id);
+                              setDeletingGameId(null);
+                              showFeedback(`Deleted "${game.title}"`);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase transition-all shadow-md"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingGameId(null)}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeletingGameId(game.id)}
+                          className="p-2 rounded-xl bg-red-950/50 hover:bg-red-900 text-red-400 hover:text-red-200 transition-colors"
+                          title="Delete Game"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -601,18 +632,38 @@ export const AdminPanelModal = ({
                     <span>Download games.json</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      if (confirm('Reset catalog back to initial default games? Any custom additions will be restored.')) {
-                        onResetCatalog();
-                        showFeedback('Catalog reset to initial default games!');
-                      }
-                    }}
-                    className="px-4 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/40 text-xs font-bold text-red-300 flex items-center space-x-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Reset to Default Games</span>
-                  </button>
+                  {showResetConfirm ? (
+                    <div className="flex items-center space-x-2 bg-red-950/80 p-1.5 rounded-xl border border-red-500/50">
+                      <span className="text-xs font-bold text-red-200">Reset default games?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onResetCatalog();
+                          setShowResetConfirm(false);
+                          showFeedback('Catalog reset to initial default games!');
+                        }}
+                        className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-md"
+                      >
+                        Yes, Reset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowResetConfirm(false)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)}
+                      className="px-4 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/40 text-xs font-bold text-red-300 flex items-center space-x-2"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Reset to Default Games</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

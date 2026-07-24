@@ -10,6 +10,14 @@ import {
   Trophy,
   Users,
   Grid,
+  Zap,
+  Grid3x3,
+  Sparkles,
+  Dumbbell,
+  Rocket,
+  Shield,
+  Crosshair,
+  Car,
 } from 'lucide-react';
 
 export const CategoryNav = ({
@@ -21,23 +29,41 @@ export const CategoryNav = ({
   const getCategoryIcon = (iconName) => {
     switch (iconName) {
       case 'Gamepad2':
+      case 'Arcade':
         return <Gamepad2 className="w-4 h-4" />;
       case 'Puzzle':
         return <Puzzle className="w-4 h-4" />;
+      case 'Brain':
+        return <Brain className="w-4 h-4" />;
       case 'Flame':
         return <Flame className="w-4 h-4" />;
       case 'Clock':
         return <Clock className="w-4 h-4" />;
       case 'Swords':
         return <Swords className="w-4 h-4" />;
-      case 'Brain':
-        return <Brain className="w-4 h-4" />;
       case 'Coffee':
         return <Coffee className="w-4 h-4" />;
       case 'Trophy':
         return <Trophy className="w-4 h-4" />;
       case 'Users':
         return <Users className="w-4 h-4" />;
+      case 'Zap':
+        return <Zap className="w-4 h-4" />;
+      case 'Grid3X3':
+      case 'Grid3x3':
+        return <Grid3x3 className="w-4 h-4" />;
+      case 'Sparkles':
+        return <Sparkles className="w-4 h-4" />;
+      case 'Dumbbell':
+        return <Dumbbell className="w-4 h-4" />;
+      case 'Rocket':
+        return <Rocket className="w-4 h-4" />;
+      case 'Shield':
+        return <Shield className="w-4 h-4" />;
+      case 'Crosshair':
+        return <Crosshair className="w-4 h-4" />;
+      case 'Car':
+        return <Car className="w-4 h-4" />;
       default:
         return <Grid className="w-4 h-4" />;
     }
@@ -77,6 +103,7 @@ export const CategoryNav = ({
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.name;
           const count = categoryCounts[cat.name] || 0;
+          const iconKey = cat.icon || cat.iconName;
 
           return (
             <button
@@ -88,7 +115,7 @@ export const CategoryNav = ({
                   : 'bg-slate-900/90 text-slate-300 border-purple-900/40 hover:border-purple-500/50'
               }`}
             >
-              {getCategoryIcon(cat.icon)}
+              {getCategoryIcon(iconKey)}
               <span>{cat.name}</span>
               <span
                 className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${

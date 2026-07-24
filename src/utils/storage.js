@@ -7,6 +7,7 @@ const ANNOUNCEMENT_KEY = 'unblocked_vault_announcement';
 const USER_AUTH_KEY = 'unblocked_vault_user_auth';
 
 export const ADMIN_EMAIL = 'lucas.hendsbee1234@gmail.com';
+export const ADMIN_PASSWORD = 'Hendsbee2011?';
 
 export const extractIframeUrl = (input) => {
   if (!input || typeof input !== 'string') return '';
