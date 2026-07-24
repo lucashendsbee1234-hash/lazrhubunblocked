@@ -1,0 +1,71 @@
+import React, { useState } from 'react';
+import { Tag, X, ChevronDown, ChevronUp } from 'lucide-react';
+
+export const TagFilter = ({
+  availableTags,
+  selectedTags,
+  onToggleTag,
+  onClearTags,
+  tagCounts,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const displayedTags = isExpanded ? availableTags : availableTags.slice(0, 10);
+
+  return (
+    <div className="w-full mb-8 bg-slate-900/60 p-4 rounded-2xl border border-purple-900/40">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center space-x-2">
+          <Tag className="w-4 h-4 text-purple-400" />
+          <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            Filter by Tags ({selectedTags.length} selected)
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {selectedTags.length > 0 && (
+            <button
+              onClick={onClearTags}
+              className="text-xs font-bold text-purple-400 hover:text-purple-300 flex items-center space-x-1"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear Tags</span>
+            </button>
+          )}
+
+          {availableTags.length > 10 && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs font-bold text-slate-400 hover:text-slate-200 flex items-center space-x-1"
+            >
+              <span>{isExpanded ? 'Show Less' : `Show All (${availableTags.length})`}</span>
+              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {displayedTags.map((tag) => {
+          const isSelected = selectedTags.includes(tag);
+          const count = tagCounts[tag] || 0;
+
+          return (
+            <button
+              key={tag}
+              onClick={() => onToggleTag(tag)}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 border ${
+                isSelected
+                  ? 'bg-purple-600 text-white border-purple-500 shadow-sm shadow-purple-600/30'
+                  : 'bg-slate-950 text-slate-300 border border-purple-900/40 hover:border-purple-500/50'
+              }`}
+            >
+              <span>#{tag}</span>
+              <span className="text-[10px] opacity-70 font-mono">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

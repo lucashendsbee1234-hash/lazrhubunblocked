@@ -1,0 +1,58 @@
+[
+  {
+    "id": "Arcade",
+    "name": "Arcade",
+    "description": "Fast-paced retro and modern action games with instant gameplay.",
+    "iconName": "Gamepad2",
+    "color": "from-amber-500 to-red-500"
+  },
+  {
+    "id": "Puzzle",
+    "name": "Puzzle & Logic",
+    "description": "Brain teasers, matching, and spatial reasoning games.",
+    "iconName": "Brain",
+    "color": "from-purple-500 to-indigo-500"
+  },
+  {
+    "id": "Action",
+    "name": "Action & Reflex",
+    "description": "High energy reflexes, jumping, dodging, and shooter challenges.",
+    "iconName": "Zap",
+    "color": "from-blue-500 to-cyan-500"
+  },
+  {
+    "id": "Retro",
+    "name": "Retro Classics",
+    "description": "Timeless 8-bit and 16-bit arcade golden era favorites.",
+    "iconName": "Trophy",
+    "color": "from-emerald-500 to-teal-500"
+  },
+  {
+    "id": "Strategy",
+    "name": "Strategy & Mind",
+    "description": "Tactical decisions, grid battles, and planning ahead.",
+    "iconName": "Grid3X3",
+    "color": "from-rose-500 to-pink-500"
+  },
+  {
+    "id": "Casual",
+    "name": "Casual & Quick",
+    "description": "Easy pick-up and play games for quick study breaks.",
+    "iconName": "Sparkles",
+    "color": "from-orange-500 to-amber-500"
+  },
+  {
+    "id": "Sports",
+    "name": "Sports & Skill",
+    "description": "Table tennis, paddle ball, and precision physics games.",
+    "iconName": "Dumbbell",
+    "color": "from-green-500 to-emerald-500"
+  },
+  {
+    "id": "2-Player",
+    "name": "2-Player Local",
+    "description": "Play against friends on the same keyboard or screen.",
+    "iconName": "Users",
+    "color": "from-sky-500 to-blue-600"
+  }
+]

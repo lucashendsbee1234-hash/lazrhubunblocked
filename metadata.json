@@ -1,0 +1,6 @@
+{
+  "name": "lazrhub",
+  "description": "A clean, responsive web arcade library for iframe games.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
