@@ -28,8 +28,11 @@ import {
   saveGameToDb,
   deleteGameFromDb,
   resetGamesDbToDefaults,
+  resetAllGameStatsInDb,
   subscribeToAnnouncement,
   saveAnnouncementToDb,
+  recordGamePlayInDb,
+  rateGameInDb,
 } from './utils/firebase';
 import { Megaphone, X } from 'lucide-react';
 
@@ -59,6 +62,11 @@ export default function App() {
     // 1. Subscribe to games in Firestore (real-time for all connected users)
     const unsubscribeGames = subscribeToGames((gamesList) => {
       if (gamesList && gamesList.length > 0) {
+        // Automatically reset legacy mock stats (views and ratings > 100) to zero
+        const hasLegacyStats = gamesList.some((g) => g.plays > 100 || (g.rating > 0 && !g.ratingCount));
+        if (hasLegacyStats) {
+          resetAllGameStatsInDb();
+        }
         setGames(gamesList);
       }
     });
@@ -162,10 +170,13 @@ export default function App() {
     const updatedPlayed = recordGamePlay(game.id);
     setRecentlyPlayedIds(updatedPlayed.map((item) => item.gameId));
 
-    // Increment play count locally
-    setGames((prev) =>
-      prev.map((g) => (g.id === game.id ? { ...g, plays: (g.plays || 0) + 1 } : g))
-    );
+    // Record play in Firestore live for all connected users
+    recordGamePlayInDb(game.id);
+  }, []);
+
+  // Handle Rate Game Trigger
+  const handleRateGame = useCallback(async (gameId, starRating, previousRating) => {
+    await rateGameInDb(gameId, starRating, previousRating);
   }, []);
 
   // Filter & Sort Logic
@@ -178,7 +189,7 @@ export default function App() {
           const matchesTitle = game.title.toLowerCase().includes(q);
           const matchesDesc = game.description.toLowerCase().includes(q);
           const matchesCategory = game.category.toLowerCase().includes(q);
-          const matchesTags = game.tags.some((t) => t.toLowerCase().includes(q));
+          const matchesTags = (game.tags || []).some((t) => t.toLowerCase().includes(q));
           if (!matchesTitle && !matchesDesc && !matchesCategory && !matchesTags) {
             return false;
           }
@@ -191,7 +202,17 @@ export default function App() {
 
         // Selected Tags check
         if (selectedTags.length > 0) {
-          const hasAllTags = selectedTags.every((st) => game.tags.includes(st));
+          const hasAllTags = selectedTags.every((st) => {
+            if (st.toLowerCase() === 'popular') {
+              return (
+                (game.tags && game.tags.includes('popular')) ||
+                (game.plays && game.plays >= 10) ||
+                (game.rating && game.rating >= 4.5) ||
+                game.isFeatured
+              );
+            }
+            return game.tags && game.tags.includes(st);
+          });
           if (!hasAllTags) return false;
         }
 
@@ -210,15 +231,15 @@ export default function App() {
       .sort((a, b) => {
         switch (sortOption) {
           case 'popular':
-            return b.plays - a.plays;
+            return (b.plays || 0) - (a.plays || 0);
           case 'rating':
-            return b.rating - a.rating;
+            return (b.rating || 0) - (a.rating || 0);
           case 'title-asc':
             return a.title.localeCompare(b.title);
           case 'title-desc':
             return b.title.localeCompare(a.title);
           case 'newest':
-            return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+            return new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime();
           default:
             return 0;
         }
@@ -246,17 +267,26 @@ export default function App() {
 
   const tagCounts = useMemo(() => {
     const counts = {};
+    let popularCount = 0;
     games.forEach((g) => {
-      g.tags.forEach((t) => {
+      const isPop =
+        (g.tags && g.tags.includes('popular')) ||
+        (g.plays && g.plays >= 10) ||
+        (g.rating && g.rating >= 4.5) ||
+        g.isFeatured;
+      if (isPop) popularCount++;
+
+      (g.tags || []).forEach((t) => {
         counts[t] = (counts[t] || 0) + 1;
       });
     });
+    counts['popular'] = popularCount;
     return counts;
   }, [games]);
 
   const availableTags = useMemo(() => {
-    const set = new Set(defaultTagsData);
-    games.forEach((g) => g.tags.forEach((t) => set.add(t)));
+    const set = new Set(['popular', ...defaultTagsData]);
+    games.forEach((g) => (g.tags || []).forEach((t) => set.add(t)));
     return Array.from(set);
   }, [games]);
 
@@ -407,12 +437,13 @@ export default function App() {
       {/* Game Modal Stage iFrame Player */}
       {activeGame && (
         <GameModal
-          game={activeGame}
+          game={games.find((g) => g.id === activeGame.id) || activeGame}
           onClose={() => setActiveGame(null)}
           isFavorite={favorites.includes(activeGame.id)}
           onToggleFavorite={handleToggleFavorite}
           relatedGames={relatedGames}
           onSelectGame={(g) => handlePlayGame(g)}
+          onRateGame={handleRateGame}
         />
       )}
 
@@ -437,6 +468,7 @@ export default function App() {
         announcement={announcement}
         onSaveAnnouncement={handleSaveAnnouncement}
         onResetCatalog={handleResetCatalog}
+        onResetStats={resetAllGameStatsInDb}
         categories={categoriesData}
       />
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Play, Star, Eye } from 'lucide-react';
+import { Heart, Play, Star, Eye, Flame } from 'lucide-react';
 
 export const GameCard = ({
   game,
@@ -8,6 +8,11 @@ export const GameCard = ({
   onPlayGame,
   viewMode = 'grid',
 }) => {
+  const isPopular =
+    (game.plays && game.plays >= 10) ||
+    (game.rating && game.rating >= 4.5) ||
+    (game.tags && game.tags.includes('popular')) ||
+    game.isFeatured;
   if (viewMode === 'compact') {
     return (
       <div
@@ -31,7 +36,7 @@ export const GameCard = ({
               <span>•</span>
               <span className="flex items-center space-x-0.5">
                 <Star className="w-3 h-3 text-purple-400 fill-current" />
-                <span>{game.rating ? game.rating.toFixed(1) : '5.0'}</span>
+                <span>{game.rating ? game.rating.toFixed(1) : '0.0'}</span>
               </span>
               <span>•</span>
               <span>{(game.plays || 0).toLocaleString()} plays</span>
@@ -79,9 +84,17 @@ export const GameCard = ({
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-          <span className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold bg-slate-950/80 backdrop-blur-md text-purple-300 border border-purple-900/40">
-            {game.category}
-          </span>
+          <div className="flex items-center space-x-1.5">
+            <span className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold bg-slate-950/80 backdrop-blur-md text-purple-300 border border-purple-900/40">
+              {game.category}
+            </span>
+            {isPopular && (
+              <span className="px-2 py-1 rounded-xl text-[10px] font-extrabold bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/50 flex items-center space-x-1 shadow-md">
+                <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />
+                <span>Popular</span>
+              </span>
+            )}
+          </div>
 
           <button
             onClick={(e) => onToggleFavorite(e, game.id)}
@@ -106,7 +119,7 @@ export const GameCard = ({
         <div className="pt-4 mt-3 border-t border-purple-900/30 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center space-x-1 text-purple-400 font-bold">
             <Star className="w-3.5 h-3.5 fill-current" />
-            <span>{game.rating ? game.rating.toFixed(1) : '5.0'}</span>
+            <span>{game.rating ? game.rating.toFixed(1) : '0.0'}</span>
           </div>
 
           <div className="flex items-center space-x-1 text-[11px] font-medium">

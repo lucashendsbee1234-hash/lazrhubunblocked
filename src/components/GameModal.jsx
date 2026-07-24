@@ -21,6 +21,7 @@ export const GameModal = ({
   onToggleFavorite,
   relatedGames,
   onSelectGame,
+  onRateGame,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTheater, setIsTheater] = useState(false);
@@ -49,8 +50,12 @@ export const GameModal = ({
   if (!game) return null;
 
   const handleRating = (stars) => {
+    const previousRating = userStars > 0 ? userStars : null;
     setUserStars(stars);
     setUserRating(game.id, stars);
+    if (onRateGame) {
+      onRateGame(game.id, stars, previousRating);
+    }
   };
 
   const handleShare = () => {
@@ -215,19 +220,27 @@ export const GameModal = ({
             {/* Rating & Share Box */}
             <div className="md:col-span-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-4 flex flex-col justify-between">
               <div>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  Rate This Game
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                    Rate This Game
+                  </span>
+                  <span className="text-xs font-mono font-bold text-purple-400 flex items-center space-x-1">
+                    <Star className="w-3.5 h-3.5 fill-current text-purple-400" />
+                    <span>{game.rating ? game.rating.toFixed(1) : '0.0'}</span>
+                    <span className="text-[10px] text-slate-500 font-sans">({game.ratingCount || 0})</span>
+                  </span>
+                </div>
                 <div className="flex items-center space-x-1 mb-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       onClick={() => handleRating(star)}
                       className="p-1 hover:scale-110 transition-transform"
+                      title={`Rate ${star} Stars`}
                     >
                       <Star
                         className={`w-6 h-6 ${
-                          star <= (userStars || game.rating)
+                          star <= (userStars || Math.round(game.rating || 0))
                             ? 'text-purple-400 fill-current'
                             : 'text-slate-700'
                         }`}
@@ -236,7 +249,7 @@ export const GameModal = ({
                   ))}
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  {userStars ? `Your rating: ${userStars} Stars` : 'Click stars to rate locally'}
+                  {userStars ? `Your rating: ${userStars} Stars` : 'Click stars to cast live rating'}
                 </p>
               </div>
 

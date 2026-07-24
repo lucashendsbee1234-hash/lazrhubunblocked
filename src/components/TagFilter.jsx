@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tag, X, ChevronDown, ChevronUp, Flame } from 'lucide-react';
 
 export const TagFilter = ({
   availableTags,
@@ -49,6 +49,7 @@ export const TagFilter = ({
         {displayedTags.map((tag) => {
           const isSelected = selectedTags.includes(tag);
           const count = tagCounts[tag] || 0;
+          const isPopularTag = tag.toLowerCase() === 'popular';
 
           return (
             <button
@@ -57,9 +58,14 @@ export const TagFilter = ({
               className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 border ${
                 isSelected
                   ? 'bg-purple-600 text-white border-purple-500 shadow-sm shadow-purple-600/30'
+                  : isPopularTag
+                  ? 'bg-amber-950/40 text-amber-300 border-amber-500/50 hover:bg-amber-900/60'
                   : 'bg-slate-950 text-slate-300 border border-purple-900/40 hover:border-purple-500/50'
               }`}
             >
+              {isPopularTag ? (
+                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              ) : null}
               <span>#{tag}</span>
               <span className="text-[10px] opacity-70 font-mono">({count})</span>
             </button>

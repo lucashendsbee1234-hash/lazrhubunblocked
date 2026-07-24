@@ -33,6 +33,7 @@ export const AdminPanelModal = ({
   announcement,
   onSaveAnnouncement,
   onResetCatalog,
+  onResetStats,
   categories,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
@@ -655,14 +656,29 @@ export const AdminPanelModal = ({
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowResetConfirm(true)}
-                      className="px-4 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/40 text-xs font-bold text-red-300 flex items-center space-x-2"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Reset to Default Games</span>
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowResetConfirm(true)}
+                        className="px-4 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/40 text-xs font-bold text-red-300 flex items-center space-x-2"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Reset to Default Games</span>
+                      </button>
+                      {onResetStats && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onResetStats();
+                            showFeedback('All views and ratings reset to 0!');
+                          }}
+                          className="px-4 py-2 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 border border-amber-900/40 text-xs font-bold text-amber-300 flex items-center space-x-2"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span>Reset Views & Ratings (0)</span>
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
