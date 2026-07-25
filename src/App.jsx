@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import initialGamesData from './data/games.json';
 import categoriesData from './data/categories.json';
 import defaultTagsData from './data/tags.json';
@@ -536,6 +537,9 @@ export default function App() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   );
 }
