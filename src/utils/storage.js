@@ -27,12 +27,37 @@ export const formatGameTitle = (rawName) => {
   if (!rawName) return 'New Game';
   
   let cleaned = rawName
-    .replace(/[-_]/g, ' ')
+    .replace(/[-_.]/g, ' ')
     .replace(/%20|\+/gi, ' ')
-    .replace(/\b(unblocked|unblockedgame|games|html5|online|free|v1|v2|v3)\b/gi, '')
+    .replace(/\b(unblocked|unblockedgame|games|html5|online|free)\b/gi, '')
     .trim();
 
-  if (!cleaned) cleaned = rawName.replace(/[-_]/g, ' ');
+  if (!cleaned) cleaned = rawName.replace(/[-_.]/g, ' ');
+
+  // Common concatenated names mapping
+  const knownSplits = [
+    [/harvestsimulator/i, 'Harvest Simulator'],
+    [/subwaysurfers/i, 'Subway Surfers'],
+    [/drifthunters/i, 'Drift Hunters'],
+    [/retrobowl/i, 'Retro Bowl'],
+    [/drivemad/i, 'Drive Mad'],
+    [/basketrandom/i, 'Basket Random'],
+    [/bitlife/i, 'BitLife'],
+    [/templerun/i, 'Temple Run'],
+    [/geometrydash/i, 'Geometry Dash'],
+    [/flappybird/i, 'Flappy Bird'],
+    [/motox3m/i, 'Moto X3M'],
+    [/stickman/i, 'Stickman'],
+  ];
+
+  for (const [regex, replacement] of knownSplits) {
+    if (regex.test(cleaned)) {
+      return replacement;
+    }
+  }
+
+  // Split camelCase (e.g. harvestSimulator -> harvest Simulator)
+  cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2');
 
   return cleaned
     .split(/\s+/)
@@ -52,7 +77,7 @@ export const deriveTitleFromUrl = (input) => {
     // 1. Check query parameters
     const params = urlObj.searchParams;
     const queryName = params.get('game') || params.get('name') || params.get('title') || params.get('g') || params.get('id');
-    if (queryName && queryName.trim().length > 1) {
+    if (queryName && queryName.trim().length > 1 && !/^\d+$/.test(queryName.trim())) {
       return formatGameTitle(queryName);
     }
 
@@ -61,22 +86,37 @@ export const deriveTitleFromUrl = (input) => {
     const genericWords = new Set([
       'index', 'index.html', 'index.htm', 'game', 'game.html', 'play', 'play.html',
       'embed', 'embed.html', 'v1', 'v2', 'v3', 'main', 'app', 'iframe', 'frame',
-      'html5', 'loader', 'mobile', 'web', 'public', 'assets', 'games', 'playgame'
+      'html5', 'loader', 'mobile', 'web', 'public', 'assets', 'games', 'playgame',
+      'files', 'file', 'content', 'static', 'build', 'dist', 'bin', 'src', 'media',
+      'uploads', 'unblocked', 'unblocked-games', 'g'
     ]);
 
-    for (let i = segments.length - 1; i >= 0; i--) {
-      let seg = segments[i].replace(/\.(html|htm|php|js|aspx|jsp|zip)$/i, '').trim();
-      if (seg && !genericWords.has(seg.toLowerCase())) {
-        return formatGameTitle(seg);
-      }
+    const isGenericSegment = (seg) => {
+      if (!seg) return true;
+      const cleanSeg = seg.replace(/\.(html|htm|php|js|aspx|jsp|zip|json)$/i, '').trim().toLowerCase();
+      if (!cleanSeg) return true;
+      if (genericWords.has(cleanSeg)) return true;
+      // Filter out pure numbers like 1, 2, 10, 100 or version strings like v1, v2, v10
+      if (/^\d+$/.test(cleanSeg)) return true;
+      if (/^v?\d+([\._-]\d+)*$/i.test(cleanSeg)) return true;
+      return false;
+    };
+
+    // Filter valid non-generic segments
+    const validSegments = segments.filter((s) => !isGenericSegment(s));
+
+    if (validSegments.length > 0) {
+      // Return the FIRST valid non-generic segment (e.g. harvestsimulator in pizzaedition.com/harvestsimulator/1/index.html)
+      const primaryGameSlug = validSegments[0].replace(/\.(html|htm|php|js|aspx|jsp|zip|json)$/i, '');
+      return formatGameTitle(primaryGameSlug);
     }
 
-    // 3. Fallback to domain host if path had only generic words
+    // 3. Fallback to domain host if path had only generic words or numbers
     let host = urlObj.hostname.replace(/^www\./i, '');
     const parts = host.split('.');
     if (parts.length > 1) {
       const domainName = parts[0];
-      if (domainName && domainName.length > 2 && !genericWords.has(domainName.toLowerCase())) {
+      if (domainName && domainName.length > 2 && !genericWords.has(domainName.toLowerCase()) && !/^\d+$/.test(domainName)) {
         return formatGameTitle(domainName);
       }
     }
@@ -84,7 +124,7 @@ export const deriveTitleFromUrl = (input) => {
     return 'New Game';
   } catch {
     const nameMatch = rawUrl.match(/\/([a-zA-Z0-9-_]+)(\/|\.html|\?|$)/);
-    if (nameMatch && nameMatch[1]) {
+    if (nameMatch && nameMatch[1] && !/^\d+$/.test(nameMatch[1])) {
       return formatGameTitle(nameMatch[1]);
     }
     return 'New Game';
