@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { extractIframeUrl, deriveTitleFromUrl } from '../utils/storage';
+import { extractIframeUrl, deriveTitleFromUrl, generateSmartGameMetadata } from '../utils/storage';
 import { BulkGameUpload } from './BulkGameUpload';
 import {
   X,
@@ -404,11 +404,41 @@ export const AdminPanelModal = ({
                   onChange={(e) => {
                     const newUrl = e.target.value;
                     const clean = extractIframeUrl(newUrl);
-                    let autoTitle = formData.title;
-                    if (clean && (!formData.title.trim() || formData.title === 'New Game')) {
-                      autoTitle = deriveTitleFromUrl(clean);
+                    if (clean) {
+                      const smart = generateSmartGameMetadata(clean);
+                      setFormData((prev) => ({
+                        ...prev,
+                        iframeUrl: newUrl,
+                        title: (!prev.title.trim() || prev.title === 'New Game' || prev.title === 'Untitled Game') ? smart.title : prev.title,
+                        category: (!prev.category || prev.category === 'Action & Reflex' || prev.category === 'Arcade') ? smart.category : prev.category,
+                        description: (!prev.description.trim()) ? smart.description : prev.description,
+                        controls: (!prev.controls.trim() || prev.controls === 'WASD or Arrow keys to play') ? smart.controls : prev.controls,
+                        tags: (!prev.tags.trim() || prev.tags === 'physics, action, singleplayer') ? smart.tagsString : prev.tags,
+                      }));
+
+                      // Trigger Gemini AI analysis endpoint in background
+                      fetch('/api/analyze-game', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ iframeSrc: clean, iframeCode: newUrl }),
+                      })
+                        .then((res) => res.json())
+                        .then((data) => {
+                          if (data.success && data.metadata) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              title: data.metadata.title || prev.title,
+                              category: data.metadata.category || prev.category,
+                              description: data.metadata.description || prev.description,
+                              controls: data.metadata.controls || prev.controls,
+                              tags: Array.isArray(data.metadata.tags) ? data.metadata.tags.join(', ') : data.metadata.tags || prev.tags,
+                            }));
+                          }
+                        })
+                        .catch((err) => console.warn('Background AI analysis notice:', err));
+                    } else {
+                      setFormData((prev) => ({ ...prev, iframeUrl: newUrl }));
                     }
-                    setFormData({ ...formData, iframeUrl: newUrl, title: autoTitle });
                   }}
                   placeholder={`Paste full HTML snippet, e.g:\n<iframe id="gameframe" src="https://games.pizzaedition.com/harvestsimulator/1/index.html?v=10" allow="..."></iframe>\nOR direct URL: https://...`}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 text-xs font-mono text-purple-300 outline-none resize-y"

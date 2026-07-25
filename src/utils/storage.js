@@ -201,6 +201,58 @@ export const deriveTitleFromUrl = (input) => {
   }
 };
 
+export const generateSmartGameMetadata = (input) => {
+  const cleanUrl = extractIframeUrl(input) || input || '';
+  const title = deriveTitleFromUrl(cleanUrl);
+  const titleLower = title.toLowerCase();
+
+  let category = 'Arcade';
+  let controls = 'WASD / Arrow Keys to move, Mouse to interact, Spacebar for action.';
+
+  if (/drift|car|race|racing|moto|drive|vehicle|driving|speed|turbo|kart|taxi|bus|truck|highway|traffic/i.test(titleLower)) {
+    category = 'Driving & Racing';
+    controls = 'WASD or Arrow Keys to steer & accelerate, Spacebar for Handbrake / Nitro.';
+  } else if (/basket|soccer|football|golf|tennis|bowl|sports|pool|billiards|boxing|skate|surf|snowboard|ski|hockey|baseball/i.test(titleLower)) {
+    category = 'Sports & Fitness';
+    controls = 'Mouse click & drag or Spacebar to time shots and moves, Arrow Keys for direction.';
+  } else if (/puzzle|chess|math|word|mahjong|sudoku|block|tile|match|2048|tetris|escape|draw|brain|connect|physics/i.test(titleLower)) {
+    category = 'Puzzle & Logic';
+    controls = 'Mouse / Touch to drag, select, and rotate items on screen.';
+  } else if (/run|subway|surfer|temple|slope|rush|dash|hook|jump|flip|bounce|tunnel|parkour|flappy|cluster|crossy|climb/i.test(titleLower)) {
+    category = 'Physics & Skill';
+    controls = 'Arrow Keys or WASD to move / jump / slide, Spacebar for boost or primary action.';
+  } else if (/harvest|farm|sim|simulator|tycoon|defense|tower|castle|manager|idle|clicker|kingdom|empire|city|cooking|chef|papa|restaurant|hospital/i.test(titleLower)) {
+    category = 'Strategy & Defense';
+    controls = 'Mouse click / Touch to manage, build, upgrade, and navigate menus.';
+  } else if (/shoot|gun|sniper|combat|battle|strike|krunker|smash|action|zombie|fight|hero|knight|monster|war|weapon|brawl/i.test(titleLower)) {
+    category = 'Action';
+    controls = 'WASD to move, Mouse to aim & shoot, R to reload, Spacebar to jump.';
+  } else if (/\.io|smash karts|holeio|slither|paperio|shell shockers|among|stumble|multiplayer|online|pvp/i.test(titleLower)) {
+    category = 'Multiplayer';
+    controls = 'WASD or Arrow Keys to move, Mouse to aim / action, Enter for live chat.';
+  }
+
+  const description = `${title} is an exciting ${category.toLowerCase()} web game playable free and unblocked directly in your browser on LAZRHUB! Master the controls and set new high scores.`;
+
+  const tagsArray = [
+    title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    category.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    'unblocked',
+    'html5',
+    'web game',
+    'free'
+  ].filter(Boolean);
+
+  return {
+    title,
+    category,
+    description,
+    controls,
+    tags: tagsArray,
+    tagsString: tagsArray.join(', '),
+  };
+};
+
 export const getStoredFavorites = () => {
   try {
     const data = localStorage.getItem(FAVORITES_KEY);

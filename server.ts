@@ -288,26 +288,49 @@ Return JSON with clean fields:
   function generateFallbackMetadata(input: string) {
     const cleanName = extractGameTitleFromLink(input);
     let category = 'Arcade';
+    let controls = 'WASD / Arrow Keys to move, Mouse to interact, Spacebar for action.';
 
     const nameLower = cleanName.toLowerCase();
-    if (nameLower.includes('drift') || nameLower.includes('car') || nameLower.includes('drive') || nameLower.includes('moto') || nameLower.includes('race')) {
+    if (/drift|car|race|racing|moto|drive|vehicle|driving|speed|turbo|kart|taxi|bus|truck|highway|traffic/i.test(nameLower)) {
       category = 'Driving & Racing';
-    } else if (nameLower.includes('ball') || nameLower.includes('basket') || nameLower.includes('soccer') || nameLower.includes('golf') || nameLower.includes('bowl')) {
+      controls = 'WASD or Arrow Keys to steer & accelerate, Spacebar for Handbrake / Nitro.';
+    } else if (/basket|soccer|football|golf|tennis|bowl|sports|pool|billiards|boxing|skate|surf|snowboard|ski|hockey|baseball/i.test(nameLower)) {
       category = 'Sports & Fitness';
-    } else if (nameLower.includes('puzzle') || nameLower.includes('chess') || nameLower.includes('math') || nameLower.includes('word')) {
+      controls = 'Mouse click & drag or Spacebar to time shots and moves, Arrow Keys for direction.';
+    } else if (/puzzle|chess|math|word|mahjong|sudoku|block|tile|match|2048|tetris|escape|draw|brain|connect|physics/i.test(nameLower)) {
       category = 'Puzzle & Logic';
-    } else if (nameLower.includes('run') || nameLower.includes('slope') || nameLower.includes('jump') || nameLower.includes('dash')) {
+      controls = 'Mouse / Touch to drag, select, and rotate items on screen.';
+    } else if (/run|subway|surfer|temple|slope|rush|dash|hook|jump|flip|bounce|tunnel|parkour|flappy|cluster|crossy|climb/i.test(nameLower)) {
       category = 'Physics & Skill';
-    } else if (nameLower.includes('shoot') || nameLower.includes('gun') || nameLower.includes('fight') || nameLower.includes('combat')) {
+      controls = 'Arrow Keys or WASD to move / jump / slide, Spacebar for boost or primary action.';
+    } else if (/harvest|farm|sim|simulator|tycoon|defense|tower|castle|manager|idle|clicker|kingdom|empire|city|cooking|chef|papa|restaurant|hospital/i.test(nameLower)) {
+      category = 'Strategy & Defense';
+      controls = 'Mouse click / Touch to manage, build, upgrade, and navigate menus.';
+    } else if (/shoot|gun|sniper|combat|battle|strike|krunker|smash|action|zombie|fight|hero|knight|monster|war|weapon|brawl/i.test(nameLower)) {
       category = 'Action';
+      controls = 'WASD to move, Mouse to aim & shoot, R to reload, Spacebar to jump.';
+    } else if (/\.io|smash karts|holeio|slither|paperio|shell shockers|among|stumble|multiplayer|online|pvp/i.test(nameLower)) {
+      category = 'Multiplayer';
+      controls = 'WASD or Arrow Keys to move, Mouse to aim / action, Enter for live chat.';
     }
+
+    const description = `${cleanName} is an exciting ${category.toLowerCase()} web game playable free and unblocked directly in your browser on LAZRHUB! Master the controls and set new high scores.`;
+
+    const tagsArray = [
+      cleanName.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+      category.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+      'unblocked',
+      'html5',
+      'web game',
+      'free'
+    ].filter(Boolean);
 
     return {
       title: cleanName,
       category,
-      description: `${cleanName} is an exciting unblocked web game playable directly in your browser on LAZRHUB.`,
-      controls: 'Arrow Keys or WASD to navigate, Mouse / Touch to interact.',
-      tags: [category.toLowerCase(), 'unblocked', 'html5', 'web', 'fun'],
+      description,
+      controls,
+      tags: tagsArray,
     };
   }
 

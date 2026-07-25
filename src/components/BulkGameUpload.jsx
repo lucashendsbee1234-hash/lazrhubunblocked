@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { extractIframeUrl, deriveTitleFromUrl } from '../utils/storage';
+import { extractIframeUrl, deriveTitleFromUrl, generateSmartGameMetadata } from '../utils/storage';
 import {
   Sparkles,
   UploadCloud,
@@ -100,24 +100,31 @@ export const BulkGameUpload = ({
     const extractedSrc = extractIframeUrl(iframeCode);
     if (!extractedSrc) return;
 
-    // Immediately extract game title from the URL so user sees instant feedback!
-    const immediateTitle = deriveTitleFromUrl(extractedSrc);
+    // Smart metadata extraction for immediate instant response
+    const smartMeta = generateSmartGameMetadata(extractedSrc);
 
     setCards((prev) => {
       const next = [...prev];
-      const existingMeta = next[index]?.autoMetadata || {};
+      const card = next[index];
+      if (!card) return prev;
+
       next[index] = {
-        ...next[index],
+        ...card,
         isAnalyzing: true,
         analysisError: '',
         autoMetadata: {
-          title: immediateTitle,
-          category: existingMeta.category || categories[0]?.name || 'Arcade',
-          description: existingMeta.description || `${immediateTitle} is an exciting web game available on LAZRHUB.`,
-          controls: existingMeta.controls || 'WASD / Arrow Keys to move, Mouse to interact.',
-          tags: existingMeta.tags || ['arcade', 'unblocked', 'web', 'html5'],
+          title: smartMeta.title,
+          category: smartMeta.category,
+          description: smartMeta.description,
+          controls: smartMeta.controls,
+          tags: smartMeta.tags,
           iframeSrc: extractedSrc,
         },
+        overrideTitle: card.overrideTitle || smartMeta.title,
+        overrideCategory: card.overrideCategory || smartMeta.category,
+        overrideDescription: card.overrideDescription || smartMeta.description,
+        overrideControls: card.overrideControls || smartMeta.controls,
+        overrideTags: card.overrideTags || smartMeta.tagsString,
       };
       return next;
     });
@@ -133,19 +140,28 @@ export const BulkGameUpload = ({
       if (data.success && data.metadata) {
         setCards((prev) => {
           const next = [...prev];
-          const aiTitle = data.metadata.title;
+          const card = next[index];
+          if (!card) return prev;
+
+          const meta = data.metadata;
+          const aiTitle = meta.title;
           const finalTitle = (aiTitle && aiTitle !== 'Web Game' && aiTitle !== 'Untitled' && aiTitle !== 'New Game')
             ? aiTitle
-            : immediateTitle;
+            : smartMeta.title;
 
           next[index] = {
-            ...next[index],
+            ...card,
             isAnalyzing: false,
             autoMetadata: {
-              ...data.metadata,
+              ...meta,
               title: finalTitle,
               iframeSrc: extractedSrc,
             },
+            overrideTitle: (!card.overrideTitle || card.overrideTitle === smartMeta.title) ? finalTitle : card.overrideTitle,
+            overrideCategory: (!card.overrideCategory || card.overrideCategory === smartMeta.category) ? (meta.category || smartMeta.category) : card.overrideCategory,
+            overrideDescription: (!card.overrideDescription || card.overrideDescription === smartMeta.description) ? (meta.description || smartMeta.description) : card.overrideDescription,
+            overrideControls: (!card.overrideControls || card.overrideControls === smartMeta.controls) ? (meta.controls || smartMeta.controls) : card.overrideControls,
+            overrideTags: (!card.overrideTags || card.overrideTags === smartMeta.tagsString) ? (Array.isArray(meta.tags) ? meta.tags.join(', ') : meta.tags || smartMeta.tagsString) : card.overrideTags,
           };
           return next;
         });
@@ -156,18 +172,9 @@ export const BulkGameUpload = ({
       console.warn('AI analysis fallback for card:', index, err);
       setCards((prev) => {
         const next = [...prev];
-        next[index] = {
-          ...next[index],
-          isAnalyzing: false,
-          autoMetadata: {
-            title: immediateTitle,
-            category: categories[0]?.name || 'Arcade',
-            description: `${immediateTitle} is an exciting web game available on LAZRHUB.`,
-            controls: 'WASD / Arrow Keys to move, Mouse to interact.',
-            tags: ['arcade', 'unblocked', 'web', 'html5'],
-            iframeSrc: extractedSrc,
-          },
-        };
+        if (next[index]) {
+          next[index].isAnalyzing = false;
+        }
         return next;
       });
     }
