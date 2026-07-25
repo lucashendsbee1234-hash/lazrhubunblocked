@@ -16,7 +16,79 @@ export const extractIframeUrl = (input) => {
   if (srcMatch && srcMatch[1]) {
     return srcMatch[1].trim();
   }
+  const httpMatch = trimmed.match(/https?:\/\/[^\s"'>]+/i);
+  if (httpMatch && httpMatch[0]) {
+    return httpMatch[0].trim();
+  }
   return trimmed;
+};
+
+export const formatGameTitle = (rawName) => {
+  if (!rawName) return 'New Game';
+  
+  let cleaned = rawName
+    .replace(/[-_]/g, ' ')
+    .replace(/%20|\+/gi, ' ')
+    .replace(/\b(unblocked|unblockedgame|games|html5|online|free|v1|v2|v3)\b/gi, '')
+    .trim();
+
+  if (!cleaned) cleaned = rawName.replace(/[-_]/g, ' ');
+
+  return cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+export const deriveTitleFromUrl = (input) => {
+  if (!input || typeof input !== 'string') return 'New Game';
+  const rawUrl = extractIframeUrl(input);
+  if (!rawUrl) return 'New Game';
+
+  try {
+    const urlObj = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+    
+    // 1. Check query parameters
+    const params = urlObj.searchParams;
+    const queryName = params.get('game') || params.get('name') || params.get('title') || params.get('g') || params.get('id');
+    if (queryName && queryName.trim().length > 1) {
+      return formatGameTitle(queryName);
+    }
+
+    // 2. Check path segments
+    const segments = urlObj.pathname.split('/').filter(Boolean);
+    const genericWords = new Set([
+      'index', 'index.html', 'index.htm', 'game', 'game.html', 'play', 'play.html',
+      'embed', 'embed.html', 'v1', 'v2', 'v3', 'main', 'app', 'iframe', 'frame',
+      'html5', 'loader', 'mobile', 'web', 'public', 'assets', 'games', 'playgame'
+    ]);
+
+    for (let i = segments.length - 1; i >= 0; i--) {
+      let seg = segments[i].replace(/\.(html|htm|php|js|aspx|jsp|zip)$/i, '').trim();
+      if (seg && !genericWords.has(seg.toLowerCase())) {
+        return formatGameTitle(seg);
+      }
+    }
+
+    // 3. Fallback to domain host if path had only generic words
+    let host = urlObj.hostname.replace(/^www\./i, '');
+    const parts = host.split('.');
+    if (parts.length > 1) {
+      const domainName = parts[0];
+      if (domainName && domainName.length > 2 && !genericWords.has(domainName.toLowerCase())) {
+        return formatGameTitle(domainName);
+      }
+    }
+
+    return 'New Game';
+  } catch {
+    const nameMatch = rawUrl.match(/\/([a-zA-Z0-9-_]+)(\/|\.html|\?|$)/);
+    if (nameMatch && nameMatch[1]) {
+      return formatGameTitle(nameMatch[1]);
+    }
+    return 'New Game';
+  }
 };
 
 export const getStoredFavorites = () => {

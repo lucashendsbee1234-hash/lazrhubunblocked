@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { extractIframeUrl } from '../utils/storage';
+import { extractIframeUrl, deriveTitleFromUrl } from '../utils/storage';
 import { BulkGameUpload } from './BulkGameUpload';
 import {
   X,
@@ -401,7 +401,15 @@ export const AdminPanelModal = ({
                   rows={3}
                   required
                   value={formData.iframeUrl}
-                  onChange={(e) => setFormData({ ...formData, iframeUrl: e.target.value })}
+                  onChange={(e) => {
+                    const newUrl = e.target.value;
+                    const clean = extractIframeUrl(newUrl);
+                    let autoTitle = formData.title;
+                    if (clean && (!formData.title.trim() || formData.title === 'New Game')) {
+                      autoTitle = deriveTitleFromUrl(clean);
+                    }
+                    setFormData({ ...formData, iframeUrl: newUrl, title: autoTitle });
+                  }}
                   placeholder={`Paste full HTML snippet, e.g:\n<iframe id="gameframe" src="https://games.pizzaedition.com/harvestsimulator/1/index.html?v=10" allow="..."></iframe>\nOR direct URL: https://...`}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-purple-500 text-xs font-mono text-purple-300 outline-none resize-y"
                 />

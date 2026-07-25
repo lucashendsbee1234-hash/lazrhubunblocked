@@ -91,31 +91,86 @@ Return JSON with clean fields:
   });
 
   // Helper fallback metadata generator
-  function generateFallbackMetadata(input) {
-    let cleanName = 'Web Game';
-    let category = 'Arcade';
+  function extractGameTitleFromLink(input: string): string {
+    if (!input) return 'New Game';
+    
+    // Extract src URL or https link
+    let rawUrl = input;
+    const srcMatch = input.match(/src=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      rawUrl = srcMatch[1];
+    } else {
+      const httpMatch = input.match(/https?:\/\/[^\s"'>]+/i);
+      if (httpMatch && httpMatch[0]) {
+        rawUrl = httpMatch[0];
+      }
+    }
 
     try {
-      const urlMatches = input.match(/https?:\/\/[^\s"']+/);
-      const rawUrl = urlMatches ? urlMatches[0] : input;
-      const urlObj = new URL(rawUrl);
-      const segments = urlObj.pathname.split('/').filter(Boolean);
+      const urlObj = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
       
-      const fileOrFolder = segments[segments.length - 1] || segments[segments.length - 2] || '';
-      const nameWithoutExt = fileOrFolder.replace(/\.(html|htm|php|aspx|js)$/i, '');
-      
-      if (nameWithoutExt && nameWithoutExt !== 'index') {
-        cleanName = nameWithoutExt
-          .replace(/[-_]/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase());
-      } else if (segments.length > 1) {
-        cleanName = segments[segments.length - 2]
-          .replace(/[-_]/g, ' ')
-          .replace(/\b\w/g, (l) => l.toUpperCase());
+      // 1. Check query parameters
+      const params = urlObj.searchParams;
+      const queryName = params.get('game') || params.get('name') || params.get('title') || params.get('g') || params.get('id');
+      if (queryName && queryName.trim().length > 1) {
+        return formatTitle(queryName);
       }
+
+      // 2. Check path segments
+      const segments = urlObj.pathname.split('/').filter(Boolean);
+      const genericWords = new Set([
+        'index', 'index.html', 'index.htm', 'game', 'game.html', 'play', 'play.html',
+        'embed', 'embed.html', 'v1', 'v2', 'v3', 'main', 'app', 'iframe', 'frame',
+        'html5', 'loader', 'mobile', 'web', 'public', 'assets', 'games', 'playgame'
+      ]);
+
+      for (let i = segments.length - 1; i >= 0; i--) {
+        let seg = segments[i].replace(/\.(html|htm|php|js|aspx|jsp|zip)$/i, '').trim();
+        if (seg && !genericWords.has(seg.toLowerCase())) {
+          return formatTitle(seg);
+        }
+      }
+
+      // 3. Fallback to domain host
+      let host = urlObj.hostname.replace(/^www\./i, '');
+      const parts = host.split('.');
+      if (parts.length > 1) {
+        const domainName = parts[0];
+        if (domainName && domainName.length > 2 && !genericWords.has(domainName.toLowerCase())) {
+          return formatTitle(domainName);
+        }
+      }
+
+      return 'New Game';
     } catch {
-      // Ignore parse error
+      const nameMatch = rawUrl.match(/\/([a-zA-Z0-9-_]+)(\/|\.html|\?|$)/);
+      if (nameMatch && nameMatch[1]) {
+        return formatTitle(nameMatch[1]);
+      }
+      return 'New Game';
     }
+  }
+
+  function formatTitle(rawName: string): string {
+    if (!rawName) return 'New Game';
+    let cleaned = rawName
+      .replace(/[-_]/g, ' ')
+      .replace(/%20|\+/gi, ' ')
+      .replace(/\b(unblocked|unblockedgame|games|html5|online|free|v1|v2|v3)\b/gi, '')
+      .trim();
+
+    if (!cleaned) cleaned = rawName.replace(/[-_]/g, ' ');
+
+    return cleaned
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  function generateFallbackMetadata(input: string) {
+    const cleanName = extractGameTitleFromLink(input);
+    let category = 'Arcade';
 
     const nameLower = cleanName.toLowerCase();
     if (nameLower.includes('drift') || nameLower.includes('car') || nameLower.includes('drive') || nameLower.includes('moto') || nameLower.includes('race')) {

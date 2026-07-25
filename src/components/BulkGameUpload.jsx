@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { extractIframeUrl } from '../utils/storage';
+import { extractIframeUrl, deriveTitleFromUrl } from '../utils/storage';
 import {
   Sparkles,
   UploadCloud,
@@ -100,9 +100,25 @@ export const BulkGameUpload = ({
     const extractedSrc = extractIframeUrl(iframeCode);
     if (!extractedSrc) return;
 
+    // Immediately extract game title from the URL so user sees instant feedback!
+    const immediateTitle = deriveTitleFromUrl(extractedSrc);
+
     setCards((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], isAnalyzing: true, analysisError: '' };
+      const existingMeta = next[index]?.autoMetadata || {};
+      next[index] = {
+        ...next[index],
+        isAnalyzing: true,
+        analysisError: '',
+        autoMetadata: {
+          title: immediateTitle,
+          category: existingMeta.category || categories[0]?.name || 'Arcade',
+          description: existingMeta.description || `${immediateTitle} is an exciting web game available on LAZRHUB.`,
+          controls: existingMeta.controls || 'WASD / Arrow Keys to move, Mouse to interact.',
+          tags: existingMeta.tags || ['arcade', 'unblocked', 'web', 'html5'],
+          iframeSrc: extractedSrc,
+        },
+      };
       return next;
     });
 
@@ -117,11 +133,17 @@ export const BulkGameUpload = ({
       if (data.success && data.metadata) {
         setCards((prev) => {
           const next = [...prev];
+          const aiTitle = data.metadata.title;
+          const finalTitle = (aiTitle && aiTitle !== 'Web Game' && aiTitle !== 'Untitled' && aiTitle !== 'New Game')
+            ? aiTitle
+            : immediateTitle;
+
           next[index] = {
             ...next[index],
             isAnalyzing: false,
             autoMetadata: {
               ...data.metadata,
+              title: finalTitle,
               iframeSrc: extractedSrc,
             },
           };
@@ -132,17 +154,15 @@ export const BulkGameUpload = ({
       }
     } catch (err) {
       console.warn('AI analysis fallback for card:', index, err);
-      // Fallback fallback metadata parsing on client
-      const fallbackTitle = deriveTitleFromUrl(extractedSrc);
       setCards((prev) => {
         const next = [...prev];
         next[index] = {
           ...next[index],
           isAnalyzing: false,
           autoMetadata: {
-            title: fallbackTitle,
+            title: immediateTitle,
             category: categories[0]?.name || 'Arcade',
-            description: `${fallbackTitle} is an exciting web game available on LAZRHUB.`,
+            description: `${immediateTitle} is an exciting web game available on LAZRHUB.`,
             controls: 'WASD / Arrow Keys to move, Mouse to interact.',
             tags: ['arcade', 'unblocked', 'web', 'html5'],
             iframeSrc: extractedSrc,
@@ -150,20 +170,6 @@ export const BulkGameUpload = ({
         };
         return next;
       });
-    }
-  };
-
-  const deriveTitleFromUrl = (url) => {
-    try {
-      const parsed = new URL(url);
-      const segments = parsed.pathname.split('/').filter(Boolean);
-      const last = segments[segments.length - 1] || segments[segments.length - 2] || 'New Game';
-      return last
-        .replace(/\.(html|htm|php|js)$/i, '')
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-    } catch {
-      return 'New Unblocked Game';
     }
   };
 
