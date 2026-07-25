@@ -42,8 +42,17 @@ export const GameModal = ({
         onClose();
       }
     };
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
   }, [game?.id, onClose]);
 
   if (!game) return null;
@@ -86,18 +95,18 @@ export const GameModal = ({
       <div
         ref={modalRef}
         className={`relative w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl text-slate-100 flex flex-col transition-all duration-300 ${
-          isTheater ? 'max-w-6xl' : 'max-w-4xl'
+          isFullscreen ? 'h-screen w-screen max-w-none rounded-none border-none p-0' : isTheater ? 'max-w-6xl' : 'max-w-4xl'
         }`}
       >
         {/* Modal Header Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/60">
+        <div className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80 shrink-0">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-800 shrink-0">
               <img src={game.thumbnailUrl} alt={game.title} className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-black text-white truncate">{game.title}</h2>
-              <div className="flex items-center space-x-2 text-xs text-slate-400">
+              <h2 className="text-base font-black text-white truncate">{game.title}</h2>
+              <div className="flex items-center space-x-2 text-[11px] text-slate-400">
                 <span className="font-semibold text-purple-400">{game.category}</span>
                 <span>•</span>
                 <span>By {game.author || 'Web Game Studio'}</span>
@@ -114,31 +123,37 @@ export const GameModal = ({
               <RotateCw className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={() => setIsTheater(!isTheater)}
-              className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                isTheater ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              }`}
-              title="Toggle Theater Mode"
-            >
-              Theater
-            </button>
+            {!isFullscreen && (
+              <button
+                onClick={() => setIsTheater(!isTheater)}
+                className={`hidden sm:flex px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                  isTheater ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+                title="Toggle Theater Mode"
+              >
+                Theater
+              </button>
+            )}
 
             <button
               onClick={toggleFullscreen}
-              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors"
-              title="Fullscreen"
+              className={`p-2 rounded-xl text-slate-300 transition-colors ${
+                isFullscreen ? 'bg-purple-600 text-white hover:bg-purple-500' : 'bg-slate-800 hover:bg-slate-700'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
 
-            <button
-              onClick={(e) => onToggleFavorite(e, game.id)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors"
-              title="Favorite"
-            >
-              <Heart className={`w-4 h-4 ${isFavorite ? 'text-purple-400 fill-current' : ''}`} />
-            </button>
+            {!isFullscreen && (
+              <button
+                onClick={(e) => onToggleFavorite(e, game.id)}
+                className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition-colors"
+                title="Favorite"
+              >
+                <Heart className={`w-4 h-4 ${isFavorite ? 'text-purple-400 fill-current' : ''}`} />
+              </button>
+            )}
 
             <button
               onClick={onClose}
@@ -151,7 +166,9 @@ export const GameModal = ({
         </div>
 
         {/* Game Stage iFrame Container */}
-        <div className="relative w-full bg-slate-950 flex items-center justify-center min-h-[420px] p-2 sm:p-4 overflow-hidden">
+        <div className={`relative w-full bg-slate-950 flex items-center justify-center overflow-hidden ${
+          isFullscreen ? 'flex-1 h-full p-0' : 'min-h-[420px] p-2 sm:p-4'
+        }`}>
           {isLoading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/90 text-slate-400 space-y-3">
               <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
@@ -161,7 +178,9 @@ export const GameModal = ({
             </div>
           )}
 
-          <div className="w-full aspect-[16/9] max-h-[620px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative bg-black">
+          <div className={`w-full relative bg-black ${
+            isFullscreen ? 'h-full w-full rounded-none border-none' : 'aspect-[16/9] max-h-[620px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl'
+          }`}>
             <iframe
               key={iframeKey}
               src={extractIframeUrl(game.iframeUrl) || 'about:blank'}
@@ -174,8 +193,9 @@ export const GameModal = ({
           </div>
         </div>
 
-        {/* Details & Controls Footer */}
-        <div className="p-4 sm:p-6 bg-slate-900 border-t border-slate-800 space-y-6">
+        {/* Details & Controls Footer - HIDE in Fullscreen Mode */}
+        {!isFullscreen && (
+          <div className="p-4 sm:p-6 bg-slate-900 border-t border-slate-800 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             {/* Description & Controls */}
             <div className="md:col-span-8 space-y-4">
@@ -317,6 +337,7 @@ export const GameModal = ({
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
