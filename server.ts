@@ -27,6 +27,8 @@ async function startServer() {
       }
 
       const apiKey = process.env.GEMINI_API_KEY;
+      const detectedTitle = extractGameTitleFromLink(targetInput);
+
       if (!apiKey) {
         console.warn('GEMINI_API_KEY missing, using intelligent fallback parser');
         return res.json({
@@ -45,14 +47,14 @@ async function startServer() {
       });
 
       const prompt = `Analyze this web game iframe URL or embed code: "${targetInput}".
-Identify or deduce metadata for this web/HTML5 game.
-Important: The URL path usually contains the game name directly after the domain or games path (for example, in "https://games.pizzaedition.com/harvestsimulator/1/index.html", the game title is "Harvest Simulator").
+The game name extracted from the URL path slug is: "${detectedTitle}".
+Generate accurate metadata specifically for this game ("${detectedTitle}").
 Return JSON with clean fields:
-- "title": Title of the game (e.g. Harvest Simulator, Slope, Drift Hunters, Retro Bowl, Subway Surfers, BitLife, Basket Random). Never return generic folder names like "1", "Index", "V1", or "Web Game" if a slug like "harvestsimulator" or "slope" exists in the link!
+- "title": "${detectedTitle}" (or full official title if known, e.g. "${detectedTitle}")
 - "category": Choose one of: Arcade, Action, Driving & Racing, Physics & Skill, Sports & Fitness, Puzzle & Logic, Strategy & Defense, Multiplayer
-- "description": Engaging 1-2 sentence description explaining the core gameplay and objective.
-- "controls": Concise user control instructions (e.g. "Arrow Keys or WASD to move / steer, Spacebar to jump / brake").
-- "tags": Array of 5-7 lowercase relevant search tags (e.g. ["arcade", "3d", "endless", "runner", "skill", "slope"]).`;
+- "description": Engaging 1-2 sentence description explaining the gameplay and core objective of ${detectedTitle}.
+- "controls": Concise user control instructions for ${detectedTitle} (e.g. "WASD or Arrow Keys to move / steer, Spacebar to jump / action").
+- "tags": Array of 5-7 lowercase relevant search tags.`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3.6-flash',
@@ -82,6 +84,13 @@ Return JSON with clean fields:
       }
 
       const parsed = JSON.parse(resultText);
+      const formattedTitle = formatTitle(parsed.title);
+      if (!formattedTitle || formattedTitle === 'Web Game' || formattedTitle === 'New Game' || formattedTitle === 'Untitled') {
+        parsed.title = detectedTitle;
+      } else {
+        parsed.title = formattedTitle;
+      }
+
       return res.json({ success: true, metadata: parsed });
     } catch (err) {
       console.error('Error analyzing game metadata:', err);
@@ -166,7 +175,98 @@ Return JSON with clean fields:
 
   function formatTitle(rawName: string): string {
     if (!rawName) return 'New Game';
-    let cleaned = rawName
+
+    const GAME_VOCABULARY = [
+      'fireboyandwatergirl', 'hillclimbracing', 'harvestsimulator', 'rooftopsnipers',
+      'subwaysurfers', 'drifthunters', 'basketrandom', 'stickmanhook', 'geometrydash', 'clusterrush',
+      'smashkarts', 'crossyroad', 'templerun', 'flappybird', 'papaspizzeria', 'papasfreezeria',
+      'baldisbasics', 'ducklife', 'drivemad', 'retrobowl', 'bitlife', 'motox3m', 'tunnelrush',
+      'slopeunblocked', 'paperio', 'slitherio', 'holeio', 'diepio', 'survevio', 'voxiomio', 'krunkerio',
+      'shellshockers', 'angrybirds', 'plantsvszombies', 'supermario', 'sonicthehedgehog',
+      'harvest', 'simulator', 'subway', 'surfers', 'drift', 'hunters', 'retro', 'bowl',
+      'drive', 'basket', 'random', 'temple', 'geometry', 'dash', 'flappy', 'bird',
+      'moto', 'stickman', 'hook', 'rooftop', 'snipers', 'cluster', 'rush', 'smash',
+      'karts', 'crossy', 'road', 'fireboy', 'watergirl', 'papa', 'pizzeria', 'freezeria',
+      'bakeria', 'burgeria', 'pancakeria', 'baldi', 'basics', 'duck', 'life', 'tunnel',
+      'slope', 'paper', 'slither', 'hole', 'diep', 'krunker', 'voxiom', 'shell',
+      'shockers', 'angry', 'birds', 'plants', 'zombies', 'mario', 'super', 'sonic',
+      'hedgehog', 'pokemon', 'bloxd', 'terraria', 'roblox', 'among', 'stumble',
+      'friday', 'night', 'funkin', 'freddy', 'freddys', 'nights', 'tetris', 'snake',
+      'pong', 'breakout', 'invaders', 'asteroids', 'galaga', 'pinball', 'solitaire',
+      'chess', 'checkers', 'mahjong', 'sudoku', 'bubble', 'shooter', 'bejeweled',
+      'candy', 'crush', 'fruit', 'ninja', 'doodle', 'jetpack', 'joyride', 'climb',
+      'racing', 'police', 'taxi', 'bus', 'train', 'plane', 'flight', 'boat', 'ship',
+      'tank', 'army', 'sniper', 'zombie', 'monster', 'dragon', 'knight', 'pirate',
+      'alien', 'robot', 'hero', 'legend', 'clash', 'craft', 'build', 'idle',
+      'clicker', 'tycoon', 'manager', 'chef', 'cooking', 'doctor', 'hospital',
+      'salon', 'dress', 'makeup', 'cat', 'dog', 'pet', 'animal', 'farm', 'city',
+      'town', 'island', 'world', 'universe', 'galaxy', 'star', 'pixel', 'arcade',
+      'action', 'puzzle', 'physics', 'math', 'words', 'board', 'card', 'dice',
+      'sports', 'soccer', 'football', 'basketball', 'tennis', 'golf', 'bowling',
+      'pool', 'billiards', 'boxing', 'wrestling', 'karate', 'skate', 'snowboard',
+      'surf', 'ski', 'runner', 'racer', 'jumper', 'flyer', 'driver', 'fighter',
+      'hunter', 'climber', 'escape', 'survival', 'arena', 'battle', 'combat',
+      'strike', 'force', 'defense', 'tower', 'castle', 'dungeon', 'quest',
+      'adventure', 'mystery', 'magic', 'shadow', 'dark', 'light', 'neon',
+      'cyber', 'future', 'chaos', 'madness', 'extreme', 'furious', 'frenzy',
+      'fever', 'blitz', 'crash', 'break', 'destroy', 'blast', 'boom', 'burst',
+      'flip', 'spin', 'bounce', 'roll', 'slide', 'stack', 'merge', 'match',
+      'draw', 'paint', 'color', 'fill', 'connect', 'link', 'slice', 'chop',
+      'throw', 'catch', 'dodge', 'avoid', 'block', 'shield', 'power', 'speed',
+      'turbo', 'nitro', 'fast', 'quick', 'swift', 'tiny', 'mini', 'micro',
+      'giant', 'mega', 'ultra', 'hyper', 'epic', 'master', 'king', 'queen',
+      'boss', 'lord', 'champion', 'buddy', 'dude', 'guy', 'boy', 'girl',
+      'kid', 'baby', 'blob', 'ball', 'cube', 'box', 'brick', 'tile', 'circle',
+      'line', 'dot', 'game', 'play', 'run', 'fly', 'win', 'war', 'gun', 'car'
+    ];
+
+    const segmentConcatenatedWord = (word: string): string => {
+      if (!word) return '';
+      let lower = word.toLowerCase();
+
+      if (lower.endsWith('io') && lower.length > 3 && !lower.endsWith('studio')) {
+        const base = lower.slice(0, -2);
+        return `${segmentConcatenatedWord(base)}.io`;
+      }
+
+      const numMatch = lower.match(/^([a-z]+)(\d+)$/i);
+      if (numMatch) {
+        const baseSeg = segmentConcatenatedWord(numMatch[1]);
+        return `${baseSeg} ${numMatch[2]}`;
+      }
+
+      let i = 0;
+      const tokens: string[] = [];
+      while (i < lower.length) {
+        let matched = false;
+        for (let len = Math.min(20, lower.length - i); len >= 3; len--) {
+          const sub = lower.slice(i, i + len);
+          if (GAME_VOCABULARY.includes(sub)) {
+            tokens.push(sub);
+            i += len;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          if (tokens.length > 0 && !GAME_VOCABULARY.includes(tokens[tokens.length - 1])) {
+            tokens[tokens.length - 1] += lower[i];
+          } else {
+            tokens.push(lower[i]);
+          }
+          i++;
+        }
+      }
+
+      return tokens
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    };
+
+    let cleaned = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    cleaned = cleaned
       .replace(/[-_.]/g, ' ')
       .replace(/%20|\+/gi, ' ')
       .replace(/\b(unblocked|unblockedgame|games|html5|online|free)\b/gi, '')
@@ -174,34 +274,15 @@ Return JSON with clean fields:
 
     if (!cleaned) cleaned = rawName.replace(/[-_.]/g, ' ');
 
-    const knownSplits: Array<[RegExp, string]> = [
-      [/harvestsimulator/i, 'Harvest Simulator'],
-      [/subwaysurfers/i, 'Subway Surfers'],
-      [/drifthunters/i, 'Drift Hunters'],
-      [/retrobowl/i, 'Retro Bowl'],
-      [/drivemad/i, 'Drive Mad'],
-      [/basketrandom/i, 'Basket Random'],
-      [/bitlife/i, 'BitLife'],
-      [/templerun/i, 'Temple Run'],
-      [/geometrydash/i, 'Geometry Dash'],
-      [/flappybird/i, 'Flappy Bird'],
-      [/motox3m/i, 'Moto X3M'],
-      [/stickman/i, 'Stickman'],
-    ];
-
-    for (const [regex, replacement] of knownSplits) {
-      if (regex.test(cleaned)) {
-        return replacement;
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    const formattedWords = words.map((w) => {
+      if (/^[a-zA-Z0-9]+$/.test(w) && w.length >= 6) {
+        return segmentConcatenatedWord(w);
       }
-    }
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    });
 
-    cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2');
-
-    return cleaned
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(' ');
+    return formattedWords.join(' ');
   }
 
   function generateFallbackMetadata(input: string) {

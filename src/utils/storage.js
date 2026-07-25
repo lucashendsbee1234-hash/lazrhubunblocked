@@ -25,8 +25,99 @@ export const extractIframeUrl = (input) => {
 
 export const formatGameTitle = (rawName) => {
   if (!rawName) return 'New Game';
-  
-  let cleaned = rawName
+
+  const GAME_VOCABULARY = [
+    'fireboyandwatergirl', 'hillclimbracing', 'harvestsimulator', 'rooftopsnipers',
+    'subwaysurfers', 'drifthunters', 'basketrandom', 'stickmanhook', 'geometrydash', 'clusterrush',
+    'smashkarts', 'crossyroad', 'templerun', 'flappybird', 'papaspizzeria', 'papasfreezeria',
+    'baldisbasics', 'ducklife', 'drivemad', 'retrobowl', 'bitlife', 'motox3m', 'tunnelrush',
+    'slopeunblocked', 'paperio', 'slitherio', 'holeio', 'diepio', 'survevio', 'voxiomio', 'krunkerio',
+    'shellshockers', 'angrybirds', 'plantsvszombies', 'supermario', 'sonicthehedgehog',
+    'harvest', 'simulator', 'subway', 'surfers', 'drift', 'hunters', 'retro', 'bowl',
+    'drive', 'basket', 'random', 'temple', 'geometry', 'dash', 'flappy', 'bird',
+    'moto', 'stickman', 'hook', 'rooftop', 'snipers', 'cluster', 'rush', 'smash',
+    'karts', 'crossy', 'road', 'fireboy', 'watergirl', 'papa', 'pizzeria', 'freezeria',
+    'bakeria', 'burgeria', 'pancakeria', 'baldi', 'basics', 'duck', 'life', 'tunnel',
+    'slope', 'paper', 'slither', 'hole', 'diep', 'krunker', 'voxiom', 'shell',
+    'shockers', 'angry', 'birds', 'plants', 'zombies', 'mario', 'super', 'sonic',
+    'hedgehog', 'pokemon', 'bloxd', 'terraria', 'roblox', 'among', 'stumble',
+    'friday', 'night', 'funkin', 'freddy', 'freddys', 'nights', 'tetris', 'snake',
+    'pong', 'breakout', 'invaders', 'asteroids', 'galaga', 'pinball', 'solitaire',
+    'chess', 'checkers', 'mahjong', 'sudoku', 'bubble', 'shooter', 'bejeweled',
+    'candy', 'crush', 'fruit', 'ninja', 'doodle', 'jetpack', 'joyride', 'climb',
+    'racing', 'police', 'taxi', 'bus', 'train', 'plane', 'flight', 'boat', 'ship',
+    'tank', 'army', 'sniper', 'zombie', 'monster', 'dragon', 'knight', 'pirate',
+    'alien', 'robot', 'hero', 'legend', 'clash', 'craft', 'build', 'idle',
+    'clicker', 'tycoon', 'manager', 'chef', 'cooking', 'doctor', 'hospital',
+    'salon', 'dress', 'makeup', 'cat', 'dog', 'pet', 'animal', 'farm', 'city',
+    'town', 'island', 'world', 'universe', 'galaxy', 'star', 'pixel', 'arcade',
+    'action', 'puzzle', 'physics', 'math', 'words', 'board', 'card', 'dice',
+    'sports', 'soccer', 'football', 'basketball', 'tennis', 'golf', 'bowling',
+    'pool', 'billiards', 'boxing', 'wrestling', 'karate', 'skate', 'snowboard',
+    'surf', 'ski', 'runner', 'racer', 'jumper', 'flyer', 'driver', 'fighter',
+    'hunter', 'climber', 'escape', 'survival', 'arena', 'battle', 'combat',
+    'strike', 'force', 'defense', 'tower', 'castle', 'dungeon', 'quest',
+    'adventure', 'mystery', 'magic', 'shadow', 'dark', 'light', 'neon',
+    'cyber', 'future', 'chaos', 'madness', 'extreme', 'furious', 'frenzy',
+    'fever', 'blitz', 'crash', 'break', 'destroy', 'blast', 'boom', 'burst',
+    'flip', 'spin', 'bounce', 'roll', 'slide', 'stack', 'merge', 'match',
+    'draw', 'paint', 'color', 'fill', 'connect', 'link', 'slice', 'chop',
+    'throw', 'catch', 'dodge', 'avoid', 'block', 'shield', 'power', 'speed',
+    'turbo', 'nitro', 'fast', 'quick', 'swift', 'tiny', 'mini', 'micro',
+    'giant', 'mega', 'ultra', 'hyper', 'epic', 'master', 'king', 'queen',
+    'boss', 'lord', 'champion', 'buddy', 'dude', 'guy', 'boy', 'girl',
+    'kid', 'baby', 'blob', 'ball', 'cube', 'box', 'brick', 'tile', 'circle',
+    'line', 'dot', 'game', 'play', 'run', 'fly', 'win', 'war', 'gun', 'car'
+  ];
+
+  const segmentConcatenatedWord = (word) => {
+    if (!word) return '';
+    let lower = word.toLowerCase();
+
+    if (lower.endsWith('io') && lower.length > 3 && !lower.endsWith('studio')) {
+      const base = lower.slice(0, -2);
+      return `${segmentConcatenatedWord(base)}.io`;
+    }
+
+    const numMatch = lower.match(/^([a-z]+)(\d+)$/i);
+    if (numMatch) {
+      const baseSeg = segmentConcatenatedWord(numMatch[1]);
+      return `${baseSeg} ${numMatch[2]}`;
+    }
+
+    let i = 0;
+    const tokens = [];
+    while (i < lower.length) {
+      let matched = false;
+      for (let len = Math.min(20, lower.length - i); len >= 3; len--) {
+        const sub = lower.slice(i, i + len);
+        if (GAME_VOCABULARY.includes(sub)) {
+          tokens.push(sub);
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        if (tokens.length > 0 && !GAME_VOCABULARY.includes(tokens[tokens.length - 1])) {
+          tokens[tokens.length - 1] += lower[i];
+        } else {
+          tokens.push(lower[i]);
+        }
+        i++;
+      }
+    }
+
+    return tokens
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  };
+
+  // 1. Handle camelCase before lowercasing (e.g. harvestSimulator -> harvest Simulator)
+  let cleaned = rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+  cleaned = cleaned
     .replace(/[-_.]/g, ' ')
     .replace(/%20|\+/gi, ' ')
     .replace(/\b(unblocked|unblockedgame|games|html5|online|free)\b/gi, '')
@@ -34,36 +125,15 @@ export const formatGameTitle = (rawName) => {
 
   if (!cleaned) cleaned = rawName.replace(/[-_.]/g, ' ');
 
-  // Common concatenated names mapping
-  const knownSplits = [
-    [/harvestsimulator/i, 'Harvest Simulator'],
-    [/subwaysurfers/i, 'Subway Surfers'],
-    [/drifthunters/i, 'Drift Hunters'],
-    [/retrobowl/i, 'Retro Bowl'],
-    [/drivemad/i, 'Drive Mad'],
-    [/basketrandom/i, 'Basket Random'],
-    [/bitlife/i, 'BitLife'],
-    [/templerun/i, 'Temple Run'],
-    [/geometrydash/i, 'Geometry Dash'],
-    [/flappybird/i, 'Flappy Bird'],
-    [/motox3m/i, 'Moto X3M'],
-    [/stickman/i, 'Stickman'],
-  ];
-
-  for (const [regex, replacement] of knownSplits) {
-    if (regex.test(cleaned)) {
-      return replacement;
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  const formattedWords = words.map((w) => {
+    if (/^[a-zA-Z0-9]+$/.test(w) && w.length >= 6) {
+      return segmentConcatenatedWord(w);
     }
-  }
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
 
-  // Split camelCase (e.g. harvestSimulator -> harvest Simulator)
-  cleaned = cleaned.replace(/([a-z])([A-Z])/g, '$1 $2');
-
-  return cleaned
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+  return formattedWords.join(' ');
 };
 
 export const deriveTitleFromUrl = (input) => {
