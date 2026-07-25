@@ -36,7 +36,6 @@ export const GameModal = ({
     if (!game) return;
     const ratings = getStoredUserRatings();
     setUserStars(ratings[game.id] || 0);
-    setIsLoading(true);
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && !document.fullscreenElement) {
@@ -45,7 +44,7 @@ export const GameModal = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game, onClose]);
+  }, [game?.id, onClose]);
 
   if (!game) return null;
 

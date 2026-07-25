@@ -54,7 +54,7 @@ export const HeroBanner = ({
 
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-950/80 backdrop-blur-md text-purple-300 border border-purple-800/50 flex items-center space-x-1">
             <Star className="w-3.5 h-3.5 text-purple-400 fill-current" />
-            <span>{featuredGame.rating ? featuredGame.rating.toFixed(1) : '5.0'} Rating</span>
+            <span>{featuredGame.rating ? featuredGame.rating.toFixed(1) : '0.0'} Rating</span>
           </span>
 
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-900/40 text-purple-200 border border-purple-700/40">

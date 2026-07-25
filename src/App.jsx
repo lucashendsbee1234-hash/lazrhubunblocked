@@ -62,11 +62,6 @@ export default function App() {
     // 1. Subscribe to games in Firestore (real-time for all connected users)
     const unsubscribeGames = subscribeToGames((gamesList) => {
       if (gamesList && gamesList.length > 0) {
-        // Automatically reset legacy mock stats (views and ratings > 100) to zero
-        const hasLegacyStats = gamesList.some((g) => g.plays > 100 || (g.rating > 0 && !g.ratingCount));
-        if (hasLegacyStats) {
-          resetAllGameStatsInDb();
-        }
         setGames(gamesList);
       }
     });
@@ -170,13 +165,34 @@ export default function App() {
     const updatedPlayed = recordGamePlay(game.id);
     setRecentlyPlayedIds(updatedPlayed.map((item) => item.gameId));
 
+    // Optimistically update plays count in local state instantly
+    setGames((prevGames) =>
+      prevGames.map((g) =>
+        g.id === game.id ? { ...g, plays: (g.plays || 0) + 1 } : g
+      )
+    );
+
     // Record play in Firestore live for all connected users
     recordGamePlayInDb(game.id);
   }, []);
 
   // Handle Rate Game Trigger
   const handleRateGame = useCallback(async (gameId, starRating, previousRating) => {
-    await rateGameInDb(gameId, starRating, previousRating);
+    const res = await rateGameInDb(gameId, starRating, previousRating);
+    if (res && typeof res.rating === 'number') {
+      setGames((prevGames) =>
+        prevGames.map((g) =>
+          g.id === gameId
+            ? {
+                ...g,
+                rating: res.rating,
+                ratingCount: res.ratingCount,
+                ratingSum: res.ratingSum,
+              }
+            : g
+        )
+      );
+    }
   }, []);
 
   // Filter & Sort Logic

@@ -75,16 +75,39 @@ export const seedDefaultGames = async () => {
   }
 };
 
-// Add or update a game in Firestore
+// Add or update a game in Firestore (preserves existing views and rating stats)
 export const saveGameToDb = async (gameData) => {
   try {
     const id = gameData.id || `game-${Date.now()}`;
-    const cleanGame = {
-      ...gameData,
-      id,
-      updatedAt: new Date().toISOString(),
-    };
-    await setDoc(doc(db, GAMES_COLLECTION, id), cleanGame, { merge: true });
+    const gameRef = doc(db, GAMES_COLLECTION, id);
+    const existingSnap = await getDoc(gameRef);
+
+    let cleanGame;
+    if (existingSnap.exists()) {
+      const existingData = existingSnap.data();
+      cleanGame = {
+        ...existingData,
+        ...gameData,
+        plays: existingData.plays ?? gameData.plays ?? 0,
+        rating: existingData.rating ?? gameData.rating ?? 0,
+        ratingCount: existingData.ratingCount ?? gameData.ratingCount ?? 0,
+        ratingSum: existingData.ratingSum ?? gameData.ratingSum ?? 0,
+        id,
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      cleanGame = {
+        plays: 0,
+        rating: 0,
+        ratingCount: 0,
+        ratingSum: 0,
+        ...gameData,
+        id,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    await setDoc(gameRef, cleanGame, { merge: true });
     return cleanGame;
   } catch (err) {
     handleFirestoreError(err, 'write', `${GAMES_COLLECTION}/${gameData?.id}`);
@@ -154,9 +177,13 @@ export const recordGamePlayInDb = async (gameId) => {
   if (!gameId) return;
   try {
     const gameRef = doc(db, GAMES_COLLECTION, gameId);
-    await updateDoc(gameRef, {
-      plays: increment(1),
-    });
+    await setDoc(
+      gameRef,
+      {
+        plays: increment(1),
+      },
+      { merge: true }
+    );
   } catch (err) {
     handleFirestoreError(err, 'write', `${GAMES_COLLECTION}/${gameId}`);
   }
@@ -218,7 +245,20 @@ export const rateGameInDb = async (gameId, starRating, previousRating = null) =>
         },
         { merge: true }
       );
-      return newRating;
+      return { rating: newRating, ratingCount: newCount, ratingSum: newSum };
+    } else {
+      const newRating = Number(starRating.toFixed(1));
+      await setDoc(
+        gameRef,
+        {
+          rating: newRating,
+          ratingCount: 1,
+          ratingSum: starRating,
+          plays: 0,
+        },
+        { merge: true }
+      );
+      return { rating: newRating, ratingCount: 1, ratingSum: starRating };
     }
   } catch (err) {
     handleFirestoreError(err, 'write', `${GAMES_COLLECTION}/${gameId}`);
