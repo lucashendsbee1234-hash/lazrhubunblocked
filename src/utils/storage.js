@@ -201,6 +201,118 @@ export const deriveTitleFromUrl = (input) => {
   }
 };
 
+export const buildRichGameDescription = (title, category) => {
+  const t = (title || '').toLowerCase();
+
+  // Specific game signature checks
+  if (t.includes('harvest') && (t.includes('farm') || t.includes('sim'))) {
+    return `Take control of modern agricultural machinery to plow fields, plant seeds, and harvest abundant crops in ${title}. Upgrade your tractors, manage farm logistics, and build a flourishing farming enterprise!`;
+  }
+  if (t.includes('harvest') || t.includes('farm')) {
+    return `Cultivate crops, raise farm animals, and expand your agricultural empire in ${title}. Drive tractors, harvest produce, and manage your farm to maximize profit and efficiency!`;
+  }
+  if (t.includes('subway') || t.includes('surfer')) {
+    return `Dash through vibrant railway tracks, leap over oncoming trains, and collect shiny coins while outrunning the grumpy inspector and his dog in ${title}!`;
+  }
+  if (t.includes('drift') && (t.includes('hunter') || t.includes('car') || t.includes('boss'))) {
+    return `Tune iconic sports cars, hit challenging tracks, and slide through long-angle drifts to earn points and unlock high-performance vehicles in ${title}!`;
+  }
+  if (t.includes('retro') && t.includes('bowl')) {
+    return `Take charge as the head coach and quarterback of your football team in ${title}. Manage your roster, draft star talent, and execute game-winning plays to win the ultimate championship!`;
+  }
+  if (t.includes('drive mad') || (t.includes('drive') && t.includes('mad'))) {
+    return `Pilot oversized 4x4 trucks across treacherous physics-based tracks filled with ramps, bridges, and hazards in ${title}. Balance your speed carefully to reach the finish line without flipping!`;
+  }
+  if (t.includes('basket') && t.includes('random')) {
+    return `Enjoy chaotic single-button physics basketball where every jump and bounce leads to hilarious shots in ${title}. Adapt to changing courts, random players, and wild ball physics!`;
+  }
+  if (t.includes('slope')) {
+    return `Guide a fast-rolling 3D ball down an endless steep neon slope in ${title}. React instantly to sharp turns, narrow platforms, and red obstacles as you push for a record high score!`;
+  }
+  if (t.includes('temple') && t.includes('run')) {
+    return `Sprint through ancient temple ruins, slide under fallen trees, and swing across broken bridges to escape ferocious demon monkeys chasing you in ${title}!`;
+  }
+  if (t.includes('flappy')) {
+    return `Tap with precision to flap your wings and navigate through dense fields of pipe obstacles in ${title}, testing your reflexes and rhythm to set new high scores!`;
+  }
+  if (t.includes('geometry') && t.includes('dash')) {
+    return `Rhythmically jump, fly, and flip your way through treacherous geometric spike courses in ${title}, syncing your movements to energetic electronic beats!`;
+  }
+  if (t.includes('stickman') && t.includes('hook')) {
+    return `Swing through dozens of challenging physics levels as a nimble stickman in ${title}. Time your grapple releases to bounce off trampolines and zoom past obstacles to the finish line!`;
+  }
+  if (t.includes('rooftop') && t.includes('sniper')) {
+    return `Engage in unpredictable 2-player sniper duels on slippery city rooftops in ${title}. Use wild ragdoll physics and random weaponry to knock your rival off the building!`;
+  }
+  if (t.includes('cluster') && t.includes('rush')) {
+    return `Leap across the roofs of speeding, out-of-control semi-trucks in ${title}. Dodge tumbling vehicles and maintain your momentum in this heart-pounding first-person platformer!`;
+  }
+  if (t.includes('smash') && t.includes('kart')) {
+    return `Drive combat go-karts into 3D arena battles in ${title}. Collect mystery boxes on the track to grab rocket launchers, machine guns, and mines to blast rival players!`;
+  }
+  if (t.includes('fireboy') || t.includes('watergirl')) {
+    return `Work cooperatively to guide Fireboy and Watergirl through dangerous elemental temples in ${title}. Solve environmental puzzles, flip levers, and collect gems while avoiding contrasting elements!`;
+  }
+  if (t.includes('papa') && (t.includes('pizzeria') || t.includes('freezeria') || t.includes('baker') || t.includes('sushi') || t.includes('burg'))) {
+    return `Serve hungry customers delicious customized orders in Papa's kitchen! Manage order tickets, grill or bake to perfection, and top off meals to earn big tips and upgrade your shop in ${title}.`;
+  }
+  if (t.includes('baldi')) {
+    return `Collect notebook problems while escaping the strict teacher Baldi in ${title}. Solve tricky math questions, collect school items, and navigate corridors to escape!`;
+  }
+  if (t.includes('duck life') || t.includes('ducklife')) {
+    return `Train a young duckling in running, swimming, flying, and climbing to win championship races in ${title}. Feed your duck seeds and level up its stats to become a racing champion!`;
+  }
+  if (t.includes('bitlife') || t.includes('bit life')) {
+    return `Shape your character's life story from birth to old age in ${title}. Make choices regarding education, careers, relationships, and wealth to craft a unique virtual life!`;
+  }
+  if (t.includes('moto x3m') || t.includes('x3m')) {
+    return `Race high-powered dirt bikes across extreme obstacle courses in ${title}. Perform backflips to shave seconds off your timer while dodging landmines and buzzsaws!`;
+  }
+  if (t.includes('tunnel rush') || t.includes('tunnel')) {
+    return `Fly through a fast-paced 3D tunnel packed with rotating hazard gates and moving geometric shapes in ${title}, putting your reflexes to the ultimate test!`;
+  }
+  if (t.includes('paper.io') || t.includes('paperio')) {
+    return `Claim colorful territory by drawing enclosed loops across the arena in ${title}. Cut off rival trails to eliminate opponents and expand your kingdom on the leaderboard!`;
+  }
+  if (t.includes('slither') || t.includes('slitherio')) {
+    return `Grow a glowing snake by consuming energy pellets in ${title}. Outmaneuver giant snakes, force them to crash into your body, and devour their remains to top the leaderboard!`;
+  }
+  if (t.includes('hole.io') || t.includes('holeio')) {
+    return `Control an all-devouring black hole roaming through a bustling city in ${title}. Swallow park benches, cars, and entire skyscrapers to grow larger than competing holes!`;
+  }
+  if (t.includes('shell shocker') || t.includes('shellshock')) {
+    return `Suit up as an egg armed to the yolk in ${title}. Blast rival eggs with shotguns, snipers, and rocket launchers across vibrant 3D multiplayer maps!`;
+  }
+  if (t.includes('krunker')) {
+    return `Experience fast-paced pixelated FPS combat in ${title}. Bunny-hop through maps, customize weapons, and show off sharp aiming skills in competitive online matches!`;
+  }
+
+  // Category & keyword based rich descriptions
+  if (category === 'Driving & Racing' || /car|drive|race|racing|moto|kart|drift|vehicle|speed|truck|bus|highway/i.test(t)) {
+    return `Get behind the wheel in ${title}! Accelerate down open roads, tackle sharp turns, and outpace rivals in high-octane driving challenges designed to test your precision and control.`;
+  }
+  if (category === 'Sports & Fitness' || /sport|basket|soccer|football|golf|tennis|bowl|billiards|skate|boxing|hockey/i.test(t)) {
+    return `Step onto the field in ${title}! Execute strategic plays, time your shots perfectly, and compete against tough opponents to take home the championship victory.`;
+  }
+  if (category === 'Puzzle & Logic' || /puzzle|chess|math|word|mahjong|sudoku|block|match|2048|tetris|brain|escape/i.test(t)) {
+    return `Challenge your brain with ${title}! Solve intricate puzzles, manipulate grid pieces, and exercise your logic to overcome increasingly complex stages and set new records.`;
+  }
+  if (category === 'Physics & Skill' || /run|jump|dash|hook|flip|bounce|parkour|climb|rush|fall|slope/i.test(t)) {
+    return `Test your timing and reflexes in ${title}! Master physics-based mechanics, dodge hazardous obstacles, and guide your character through action-packed stages.`;
+  }
+  if (category === 'Strategy & Defense' || /sim|simulator|farm|harvest|tycoon|defense|tower|castle|manager|idle|city|empire|build/i.test(t)) {
+    return `Build, manage, and strategize in ${title}! Plan your moves carefully, upgrade your resources, and expand your operations to overcome incoming challenges.`;
+  }
+  if (category === 'Action' || /shoot|gun|sniper|combat|battle|strike|zombie|fight|hero|war|brawl|weapon/i.test(t)) {
+    return `Dive into heart-pounding action in ${title}! Equip powerful weapons, dodge enemy attacks, and battle through hostile environments to complete your objective.`;
+  }
+  if (category === 'Multiplayer' || /\.io|multiplayer|online|pvp|arena|stumble|brawl/i.test(t)) {
+    return `Jump into fast-paced online action in ${title}! Compete against players worldwide, collect power-ups, and climb to the top of the real-time arena leaderboard.`;
+  }
+
+  return `Experience the excitement of ${title}! Master intuitive controls, navigate challenging obstacles, and set new high scores in this feature-packed unblocked web game on LAZRHUB.`;
+};
+
 export const generateSmartGameMetadata = (input) => {
   const cleanUrl = extractIframeUrl(input) || input || '';
   const title = deriveTitleFromUrl(cleanUrl);
@@ -232,7 +344,7 @@ export const generateSmartGameMetadata = (input) => {
     controls = 'WASD or Arrow Keys to move, Mouse to aim / action, Enter for live chat.';
   }
 
-  const description = `${title} is an exciting ${category.toLowerCase()} web game playable free and unblocked directly in your browser on LAZRHUB! Master the controls and set new high scores.`;
+  const description = buildRichGameDescription(title, category);
 
   const tagsArray = [
     title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
@@ -277,22 +389,41 @@ export const toggleStoredFavorite = (gameId) => {
 export const getStoredRecentlyPlayed = () => {
   try {
     const data = localStorage.getItem(RECENTLY_PLAYED_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        return { gameId: String(item), playedAt: new Date().toISOString() };
+      }
+      return { ...item, gameId: String(item?.gameId || '') };
+    }).filter((item) => Boolean(item.gameId));
   } catch {
     return [];
   }
 };
 
 export const recordGamePlay = (gameId) => {
+  if (!gameId) return getStoredRecentlyPlayed();
+  const targetId = String(gameId);
   const current = getStoredRecentlyPlayed();
-  const filtered = current.filter((item) => item.gameId !== gameId);
-  const updated = [{ gameId, playedAt: new Date().toISOString() }, ...filtered].slice(0, 20);
+  const filtered = current.filter((item) => String(item.gameId) !== targetId);
+  const updated = [{ gameId: targetId, playedAt: new Date().toISOString() }, ...filtered].slice(0, 30);
   try {
     localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(updated));
   } catch (e) {
     console.error('Failed to record recently played', e);
   }
   return updated;
+};
+
+export const clearStoredRecentlyPlayed = () => {
+  try {
+    localStorage.removeItem(RECENTLY_PLAYED_KEY);
+  } catch (e) {
+    console.error('Failed to clear recently played', e);
+  }
+  return [];
 };
 
 export const getStoredUserRatings = () => {

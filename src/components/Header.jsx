@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Search,
   Heart,
+  History,
   MessageSquarePlus,
   UserCheck,
   LogIn,
@@ -15,6 +16,10 @@ export const Header = ({
   onSearchChange,
   favoritesCount,
   onOpenFavorites,
+  recentlyPlayedCount = 0,
+  onOpenRecentlyPlayed,
+  showingFavoritesOnly = false,
+  showingRecentlyPlayedOnly = false,
   currentUser,
   onOpenAuth,
   onOpenAdminPanel,
@@ -73,16 +78,43 @@ export const Header = ({
             <span className="hidden sm:inline">Request a Game</span>
           </a>
 
-          {/* Favorites Filter */}
+          {/* Recently Played Filter Button */}
+          <button
+            onClick={onOpenRecentlyPlayed}
+            className={`p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border relative ${
+              showingRecentlyPlayedOnly
+                ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-purple-900/40'
+            }`}
+            title="Recently Played Games"
+          >
+            <History className={`w-4 h-4 ${recentlyPlayedCount > 0 ? 'text-purple-300' : 'text-slate-400'}`} />
+            <span className="hidden sm:inline">Recent</span>
+            {recentlyPlayedCount > 0 && (
+              <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                showingRecentlyPlayedOnly ? 'bg-purple-950 text-purple-200' : 'bg-purple-600 text-white'
+              }`}>
+                {recentlyPlayedCount}
+              </span>
+            )}
+          </button>
+
+          {/* Favorites Filter Button */}
           <button
             onClick={onOpenFavorites}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-bold text-xs flex items-center space-x-1.5 transition-colors border border-purple-900/40 relative"
+            className={`p-2 sm:px-3 sm:py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition-all border relative ${
+              showingFavoritesOnly
+                ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/30'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-purple-900/40'
+            }`}
             title="Favorites"
           >
-            <Heart className={`w-4 h-4 ${favoritesCount > 0 ? 'text-purple-400 fill-current' : 'text-slate-400'}`} />
+            <Heart className={`w-4 h-4 ${favoritesCount > 0 ? 'text-purple-300 fill-current' : 'text-slate-400'}`} />
             <span className="hidden sm:inline">Favorites</span>
             {favoritesCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-purple-600 text-white text-[10px] font-black">
+              <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                showingFavoritesOnly ? 'bg-purple-950 text-purple-200' : 'bg-purple-600 text-white'
+              }`}>
                 {favoritesCount}
               </span>
             )}

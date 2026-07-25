@@ -19,6 +19,7 @@ import {
   toggleStoredFavorite,
   getStoredRecentlyPlayed,
   recordGamePlay,
+  clearStoredRecentlyPlayed,
   getStoredUserAuth,
   saveStoredUserAuth,
   ADMIN_EMAIL,
@@ -72,8 +73,8 @@ export default function App() {
     });
 
     // 3. Favorites & History from local storage
-    setFavorites(getStoredFavorites());
-    setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => item.gameId));
+    setFavorites(getStoredFavorites().map(String));
+    setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => String(item.gameId)));
 
     // 4. User Auth from local storage
     const storedUser = getStoredUserAuth();
@@ -163,17 +164,23 @@ export default function App() {
   const handlePlayGame = useCallback((game) => {
     setActiveGame(game);
     const updatedPlayed = recordGamePlay(game.id);
-    setRecentlyPlayedIds(updatedPlayed.map((item) => item.gameId));
+    setRecentlyPlayedIds(updatedPlayed.map((item) => String(item.gameId)));
 
     // Optimistically update plays count in local state instantly
     setGames((prevGames) =>
       prevGames.map((g) =>
-        g.id === game.id ? { ...g, plays: (g.plays || 0) + 1 } : g
+        String(g.id) === String(game.id) ? { ...g, plays: (g.plays || 0) + 1 } : g
       )
     );
 
     // Record play in Firestore live for all connected users
     recordGamePlayInDb(game.id);
+  }, []);
+
+  // Handle Clear Recently Played History
+  const handleClearRecentlyPlayed = useCallback(() => {
+    clearStoredRecentlyPlayed();
+    setRecentlyPlayedIds([]);
   }, []);
 
   // Handle Rate Game Trigger
@@ -199,6 +206,8 @@ export default function App() {
   const filteredGames = useMemo(() => {
     return games
       .filter((game) => {
+        const gameIdStr = String(game.id);
+
         // Search query check
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -233,18 +242,29 @@ export default function App() {
         }
 
         // Favorites check
-        if (showingFavoritesOnly && !favorites.includes(game.id)) {
+        if (showingFavoritesOnly && !favorites.includes(gameIdStr)) {
           return false;
         }
 
         // Recently Played check
-        if (showingRecentlyPlayedOnly && !recentlyPlayedIds.includes(game.id)) {
+        if (showingRecentlyPlayedOnly && !recentlyPlayedIds.includes(gameIdStr)) {
           return false;
         }
 
         return true;
       })
       .sort((a, b) => {
+        // If showing Recently Played tab, sort by recency order (most recently played first)
+        if (showingRecentlyPlayedOnly) {
+          const indexA = recentlyPlayedIds.indexOf(String(a.id));
+          const indexB = recentlyPlayedIds.indexOf(String(b.id));
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+        }
+
         switch (sortOption) {
           case 'popular':
             return (b.plays || 0) - (a.plays || 0);
@@ -364,7 +384,16 @@ export default function App() {
         onOpenFavorites={() => {
           setShowingFavoritesOnly(!showingFavoritesOnly);
           setShowingRecentlyPlayedOnly(false);
+          setSelectedCategory('All');
         }}
+        recentlyPlayedCount={recentlyPlayedIds.length}
+        onOpenRecentlyPlayed={() => {
+          setShowingRecentlyPlayedOnly(!showingRecentlyPlayedOnly);
+          setShowingFavoritesOnly(false);
+          setSelectedCategory('All');
+        }}
+        showingFavoritesOnly={showingFavoritesOnly}
+        showingRecentlyPlayedOnly={showingRecentlyPlayedOnly}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
@@ -399,10 +428,12 @@ export default function App() {
           onFilterFavorites={() => {
             setShowingFavoritesOnly(!showingFavoritesOnly);
             setShowingRecentlyPlayedOnly(false);
+            setSelectedCategory('All');
           }}
           onFilterRecentlyPlayed={() => {
             setShowingRecentlyPlayedOnly(!showingRecentlyPlayedOnly);
             setShowingFavoritesOnly(false);
+            setSelectedCategory('All');
           }}
           showingFavoritesOnly={showingFavoritesOnly}
           showingRecentlyPlayedOnly={showingRecentlyPlayedOnly}
@@ -418,6 +449,20 @@ export default function App() {
             setShowingRecentlyPlayedOnly(false);
           }}
           categoryCounts={categoryCounts}
+          showingRecentlyPlayedOnly={showingRecentlyPlayedOnly}
+          showingFavoritesOnly={showingFavoritesOnly}
+          recentlyPlayedCount={recentlyPlayedIds.length}
+          favoritesCount={favorites.length}
+          onSelectRecentlyPlayed={() => {
+            setShowingRecentlyPlayedOnly(!showingRecentlyPlayedOnly);
+            setShowingFavoritesOnly(false);
+            setSelectedCategory('All');
+          }}
+          onSelectFavorites={() => {
+            setShowingFavoritesOnly(!showingFavoritesOnly);
+            setShowingRecentlyPlayedOnly(false);
+            setSelectedCategory('All');
+          }}
         />
 
         {/* Tag Discovery Filter */}
@@ -446,6 +491,7 @@ export default function App() {
             showingFavoritesOnly={showingFavoritesOnly}
             showingRecentlyPlayedOnly={showingRecentlyPlayedOnly}
             onResetFilters={handleResetFilters}
+            onClearRecentlyPlayed={handleClearRecentlyPlayed}
           />
         </div>
       </main>
