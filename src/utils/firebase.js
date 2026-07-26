@@ -29,6 +29,7 @@ export const db = getFirestore(app, firebaseConfigJson.firestoreDatabaseId || '(
 const GAMES_COLLECTION = 'games';
 const SETTINGS_COLLECTION = 'siteSettings';
 const ANNOUNCEMENT_DOC = 'globalAnnouncement';
+const LOGOS_DOC = 'siteLogos';
 
 export const handleFirestoreError = (error, operationType, path) => {
   const errInfo = {
@@ -169,6 +170,52 @@ export const saveAnnouncementToDb = async (text) => {
     );
   } catch (err) {
     handleFirestoreError(err, 'write', `${SETTINGS_COLLECTION}/${ANNOUNCEMENT_DOC}`);
+  }
+};
+
+// Subscribe to real-time site profile pictures / logos
+export const subscribeToSiteLogos = (callback) => {
+  const settingsRef = doc(db, SETTINGS_COLLECTION, LOGOS_DOC);
+  return onSnapshot(
+    settingsRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        callback({
+          headerLogo: data.headerLogo || '/logo.png',
+          footerLogo: data.footerLogo || '/logo.png',
+        });
+      } else {
+        callback({
+          headerLogo: '/logo.png',
+          footerLogo: '/logo.png',
+        });
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', `${SETTINGS_COLLECTION}/${LOGOS_DOC}`);
+      callback({
+        headerLogo: '/logo.png',
+        footerLogo: '/logo.png',
+      });
+    }
+  );
+};
+
+// Save site profile pictures / logos to Firestore
+export const saveSiteLogosToDb = async (logos) => {
+  try {
+    await setDoc(
+      doc(db, SETTINGS_COLLECTION, LOGOS_DOC),
+      {
+        headerLogo: logos.headerLogo || '/logo.png',
+        footerLogo: logos.footerLogo || '/logo.png',
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    handleFirestoreError(err, 'write', `${SETTINGS_COLLECTION}/${LOGOS_DOC}`);
   }
 };
 

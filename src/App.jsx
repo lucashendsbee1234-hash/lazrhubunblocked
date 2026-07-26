@@ -13,6 +13,7 @@ import { GameModal } from './components/GameModal';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 import { AdminPanelModal } from './components/AdminPanelModal';
+import { SiteLogoModal } from './components/SiteLogoModal';
 
 import {
   getStoredFavorites,
@@ -32,6 +33,8 @@ import {
   resetAllGameStatsInDb,
   subscribeToAnnouncement,
   saveAnnouncementToDb,
+  subscribeToSiteLogos,
+  saveSiteLogosToDb,
   recordGamePlayInDb,
   rateGameInDb,
 } from './utils/firebase';
@@ -62,9 +65,14 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isSiteLogoModalOpen, setIsSiteLogoModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  const [siteLogos, setSiteLogos] = useState({
+    headerLogo: '/logo.png',
+    footerLogo: '/logo.png',
+  });
 
-  // Real-time Firestore sync for games and site announcements + Real Analytics Session Init
+  // Real-time Firestore sync for games, announcements, logos + Real Analytics Session Init
   useEffect(() => {
     // 0. Initialize Real Analytics Session and Heartbeat
     let cleanupSession;
@@ -84,11 +92,16 @@ export default function App() {
       setAnnouncement(text || '');
     });
 
-    // 3. Favorites & History from local storage
+    // 3. Subscribe to site profile pictures & logos in Firestore
+    const unsubscribeLogos = subscribeToSiteLogos((logos) => {
+      setSiteLogos(logos);
+    });
+
+    // 4. Favorites & History from local storage
     setFavorites(getStoredFavorites().map(String));
     setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => String(item.gameId)));
 
-    // 4. User Auth from local storage
+    // 5. User Auth from local storage
     const storedUser = getStoredUserAuth();
     if (storedUser) {
       if (storedUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() && storedUser.role === 'admin') {
@@ -102,6 +115,7 @@ export default function App() {
     return () => {
       unsubscribeGames();
       unsubscribeAnnouncement();
+      unsubscribeLogos();
       if (cleanupSession) cleanupSession();
     };
   }, []);
@@ -171,6 +185,12 @@ export default function App() {
     setAnnouncement(text);
     await saveAnnouncementToDb(text);
     trackAdminAction('Broadcast Announcement Updated', text ? `"${text.substring(0, 30)}..."` : 'Cleared', currentUser?.email || 'Admin');
+  };
+
+  const handleSaveSiteLogos = async (newLogos) => {
+    setSiteLogos(newLogos);
+    await saveSiteLogosToDb(newLogos);
+    trackAdminAction('Updated Site Logos', 'Changed main header/footer profile pictures', currentUser?.email || 'Admin');
   };
 
   const handleResetCatalog = async () => {
@@ -440,6 +460,7 @@ export default function App() {
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         onSignOut={handleSignOut}
+        siteLogos={siteLogos}
       />
 
       {/* Main Container */}
@@ -574,10 +595,20 @@ export default function App() {
         onResetCatalog={handleResetCatalog}
         onResetStats={resetAllGameStatsInDb}
         categories={categoriesData}
+        onOpenSiteLogoModal={() => setIsSiteLogoModalOpen(true)}
+        siteLogos={siteLogos}
+      />
+
+      {/* Site Profile Pictures & Logo Customizer Modal */}
+      <SiteLogoModal
+        isOpen={isSiteLogoModalOpen}
+        onClose={() => setIsSiteLogoModalOpen(false)}
+        siteLogos={siteLogos}
+        onSaveSiteLogos={handleSaveSiteLogos}
       />
 
       {/* Footer */}
-      <Footer />
+      <Footer siteLogos={siteLogos} />
     </div>
   );
 }

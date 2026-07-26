@@ -1,14 +1,14 @@
 import React from 'react';
 import { Gamepad2, Heart, Shield, Code2, Keyboard, MessageSquarePlus } from 'lucide-react';
 
-export const Footer = () => {
+export const Footer = ({ siteLogos }) => {
   return (
     <footer className="mt-16 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/80 transition-colors py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center space-x-3 text-center md:text-left">
             <div className="w-10 h-10 rounded-xl overflow-hidden border border-purple-500/50 shadow-md shadow-purple-600/30 bg-black flex items-center justify-center">
-              <img src="/logo.png" alt="LAZRHUB Logo" className="w-full h-full object-cover" />
+              <img src={siteLogos?.footerLogo || "/logo.png"} alt="LAZRHUB Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <span className="text-base font-black tracking-tight text-white block leading-none">

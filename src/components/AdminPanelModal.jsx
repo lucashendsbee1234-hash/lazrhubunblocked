@@ -24,6 +24,7 @@ import {
   ExternalLink,
   ClipboardList,
   BarChart3,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export const AdminPanelModal = ({
@@ -41,6 +42,8 @@ export const AdminPanelModal = ({
   onResetCatalog,
   onResetStats,
   categories,
+  onOpenSiteLogoModal,
+  siteLogos,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
   const [activeTab, setActiveTab] = useState(isAdmin ? 'analytics' : 'profile'); // 'analytics', 'add', 'bulk', 'catalog', 'settings', 'profile'
@@ -211,17 +214,29 @@ export const AdminPanelModal = ({
 
           <div className="flex items-center space-x-2">
             {isAdmin && (
-              <a
-                href="https://docs.google.com/forms/d/1TCLiArBX8PK3YQ7tM5WtLHTjgrch11iyoy6otQvPdFA/edit#responses"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-purple-600/30 transition-all shrink-0"
-                title="Check game request responses on Google Forms"
-              >
-                <ClipboardList className="w-4 h-4" />
-                <span>Check Requests</span>
-                <ExternalLink className="w-3 h-3 opacity-80" />
-              </a>
+              <>
+                <a
+                  href="https://docs.google.com/forms/d/1TCLiArBX8PK3YQ7tM5WtLHTjgrch11iyoy6otQvPdFA/edit#responses"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-purple-600/30 transition-all shrink-0"
+                  title="Check game request responses on Google Forms"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  <span>Check Requests</span>
+                  <ExternalLink className="w-3 h-3 opacity-80" />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenSiteLogoModal && onOpenSiteLogoModal()}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white text-xs font-bold flex items-center space-x-1.5 border border-purple-500/40 shadow-md transition-all shrink-0"
+                  title="Change website header and footer profile pictures / logos"
+                >
+                  <ImageIcon className="w-4 h-4 text-purple-400" />
+                  <span>Site Logos</span>
+                </button>
+              </>
             )}
 
             <button
@@ -702,6 +717,48 @@ export const AdminPanelModal = ({
           {/* TAB 3: WEBSITE CONTROL */}
           {activeTab === 'settings' && (
             <div className="space-y-6 max-w-2xl mx-auto">
+              {/* Site Profile Pictures & Logos Setting */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-purple-300">
+                    <ImageIcon className="w-4 h-4 text-purple-400" />
+                    <span>Main Site Profile Pictures / Logos</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    LIVE LOGOS
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Change the main branding logo images rendered in the top left header corner and bottom footer. Upload local files from your computer or set image URL links.
+                </p>
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-9 h-9 rounded-xl border border-purple-500/50 bg-black overflow-hidden flex items-center justify-center shadow-md">
+                        <img src={siteLogos?.headerLogo || '/logo.png'} alt="Header Logo" className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-bold">Header</span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <div className="w-9 h-9 rounded-xl border border-purple-500/50 bg-black overflow-hidden flex items-center justify-center shadow-md">
+                        <img src={siteLogos?.footerLogo || '/logo.png'} alt="Footer Logo" className="w-full h-full object-cover" />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-bold">Footer</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onOpenSiteLogoModal && onOpenSiteLogoModal()}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold flex items-center space-x-2 shadow-lg shadow-purple-600/30 transition-all"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Customize Main Site Logos</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Live Announcement Banner Setting */}
               <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3">
                 <div className="flex items-center space-x-2 text-xs font-bold text-purple-300">

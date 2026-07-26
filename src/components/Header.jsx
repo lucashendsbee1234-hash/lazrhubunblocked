@@ -24,6 +24,7 @@ export const Header = ({
   onOpenAuth,
   onOpenAdminPanel,
   onSignOut,
+  siteLogos,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
 
@@ -33,7 +34,7 @@ export const Header = ({
         {/* Brand Logo */}
         <div className="flex items-center space-x-3 shrink-0 cursor-pointer" onClick={() => onSearchChange('')}>
           <div className="w-10 h-10 rounded-xl overflow-hidden border border-purple-500/50 shadow-md shadow-purple-600/30 bg-black flex items-center justify-center">
-            <img src="/logo.png" alt="LAZRHUB Logo" className="w-full h-full object-cover" />
+            <img src={siteLogos?.headerLogo || "/logo.png"} alt="LAZRHUB Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <span className="text-xl font-black tracking-tight text-white block leading-none">
