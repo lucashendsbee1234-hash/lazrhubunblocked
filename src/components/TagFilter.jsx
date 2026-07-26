@@ -57,7 +57,7 @@ export const TagFilter = ({
           return (
             <div
               key={tag}
-              className={`inline-flex items-center rounded-xl text-xs font-semibold transition-all border overflow-hidden ${
+              className={`inline-flex items-center shrink-0 whitespace-nowrap rounded-xl text-xs font-semibold transition-all border overflow-hidden ${
                 isSelected
                   ? 'bg-purple-600 text-white border-purple-500 shadow-sm shadow-purple-600/30'
                   : isPopularTag
