@@ -35,6 +35,12 @@ import {
   recordGamePlayInDb,
   rateGameInDb,
 } from './utils/firebase';
+import {
+  initAnalyticsSession,
+  trackGameLaunch,
+  trackSearchQuery,
+  trackAdminAction,
+} from './utils/analyticsTracker';
 import { Megaphone, X } from 'lucide-react';
 
 export default function App() {
@@ -58,8 +64,14 @@ export default function App() {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
-  // Real-time Firestore sync for games and site announcements
+  // Real-time Firestore sync for games and site announcements + Real Analytics Session Init
   useEffect(() => {
+    // 0. Initialize Real Analytics Session and Heartbeat
+    let cleanupSession;
+    initAnalyticsSession().then((cleanup) => {
+      cleanupSession = cleanup;
+    }).catch(console.error);
+
     // 1. Subscribe to games in Firestore (real-time for all connected users)
     const unsubscribeGames = subscribeToGames((gamesList) => {
       if (gamesList && gamesList.length > 0) {
@@ -90,8 +102,27 @@ export default function App() {
     return () => {
       unsubscribeGames();
       unsubscribeAnnouncement();
+      if (cleanupSession) cleanupSession();
     };
   }, []);
+
+  // Track search query events in real-time
+  useEffect(() => {
+    if (!searchQuery || !searchQuery.trim()) return;
+    const timer = setTimeout(() => {
+      const matchCount = games.filter((g) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          g.title.toLowerCase().includes(q) ||
+          g.description.toLowerCase().includes(q) ||
+          g.category.toLowerCase().includes(q)
+        );
+      }).length;
+      trackSearchQuery(searchQuery, matchCount);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, games]);
 
   // Auth Handlers
   const handleSignIn = (user) => {
@@ -99,10 +130,12 @@ export default function App() {
     saveStoredUserAuth(user);
     if (user.role === 'admin') {
       setIsAdminPanelOpen(true);
+      trackAdminAction('Admin Login', 'Super Admin authenticated', user.email);
     }
   };
 
   const handleSignOut = () => {
+    trackAdminAction('Admin Sign Out', 'Session terminated', currentUser?.email);
     setCurrentUser(null);
     saveStoredUserAuth(null);
     setIsAdminPanelOpen(false);
@@ -111,30 +144,38 @@ export default function App() {
   // Admin Game Management Handlers (Persisted directly to Firestore so everyone gets live updates)
   const handleAddGame = async (newGame) => {
     await saveGameToDb(newGame);
+    trackAdminAction('Game Added', `Published "${newGame.title}"`, currentUser?.email || 'Admin');
   };
 
   const handleUpdateGame = async (updatedGame) => {
     await saveGameToDb(updatedGame);
+    trackAdminAction('Game Updated', `Edited "${updatedGame.title}"`, currentUser?.email || 'Admin');
   };
 
   const handleDeleteGame = async (gameId) => {
+    const target = games.find((g) => g.id === gameId);
     await deleteGameFromDb(gameId);
+    trackAdminAction('Game Deleted', `Removed "${target?.title || gameId}"`, currentUser?.email || 'Admin');
   };
 
   const handleToggleFeatured = async (gameId) => {
     const target = games.find((g) => g.id === gameId);
     if (target) {
-      await saveGameToDb({ ...target, isFeatured: !target.isFeatured });
+      const newStatus = !target.isFeatured;
+      await saveGameToDb({ ...target, isFeatured: newStatus });
+      trackAdminAction('Hero Status Toggle', `${newStatus ? 'Featured' : 'Unfeatured'} "${target.title}"`, currentUser?.email || 'Admin');
     }
   };
 
   const handleSaveAnnouncement = async (text) => {
     setAnnouncement(text);
     await saveAnnouncementToDb(text);
+    trackAdminAction('Broadcast Announcement Updated', text ? `"${text.substring(0, 30)}..."` : 'Cleared', currentUser?.email || 'Admin');
   };
 
   const handleResetCatalog = async () => {
     await resetGamesDbToDefaults();
+    trackAdminAction('Catalog Reset', 'Restored default catalog', currentUser?.email || 'Admin');
   };
 
   // Keyboard Shortcuts for Search Bar
@@ -173,8 +214,9 @@ export default function App() {
       )
     );
 
-    // Record play in Firestore live for all connected users
+    // Record play in Firestore live for all connected users and track real analytics event
     recordGamePlayInDb(game.id);
+    trackGameLaunch(game);
   }, []);
 
   // Handle Clear Recently Played History

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { extractIframeUrl, deriveTitleFromUrl, generateSmartGameMetadata } from '../utils/storage';
 import { BulkGameUpload } from './BulkGameUpload';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
 import {
   X,
   PlusCircle,
@@ -22,6 +23,7 @@ import {
   UploadCloud,
   ExternalLink,
   ClipboardList,
+  BarChart3,
 } from 'lucide-react';
 
 export const AdminPanelModal = ({
@@ -41,7 +43,7 @@ export const AdminPanelModal = ({
   categories,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
-  const [activeTab, setActiveTab] = useState(isAdmin ? 'add' : 'profile'); // 'add', 'catalog', 'settings', 'profile'
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'analytics' : 'profile'); // 'analytics', 'add', 'bulk', 'catalog', 'settings', 'profile'
   const [editingGame, setEditingGame] = useState(null);
   const [searchCatalogQuery, setSearchCatalogQuery] = useState('');
   const [announcementInput, setAnnouncementInput] = useState(announcement || '');
@@ -180,7 +182,7 @@ export const AdminPanelModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-4xl max-h-[90vh] rounded-3xl bg-slate-900 border border-purple-900/50 shadow-2xl shadow-purple-950/60 flex flex-col overflow-hidden text-slate-100">
+      <div className="relative w-full max-w-6xl xl:max-w-7xl max-h-[92vh] rounded-3xl bg-slate-900 border border-purple-900/50 shadow-2xl shadow-purple-950/60 flex flex-col overflow-hidden text-slate-100">
         
         {/* Top Header Bar */}
         <div className="p-4 sm:p-6 border-b border-purple-900/40 bg-slate-950/80 flex items-center justify-between gap-4 shrink-0">
@@ -243,6 +245,21 @@ export const AdminPanelModal = ({
         <div className="flex items-center space-x-1 sm:space-x-2 px-4 sm:px-6 pt-3 border-b border-purple-900/30 bg-slate-950/40 shrink-0 overflow-x-auto no-scrollbar">
           {isAdmin && (
             <>
+              <button
+                onClick={() => {
+                  setActiveTab('analytics');
+                  if (editingGame) handleResetForm();
+                }}
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-bold flex items-center space-x-2 transition-all whitespace-nowrap border-b-2 ${
+                  activeTab === 'analytics'
+                    ? 'bg-purple-900/30 text-purple-300 border-purple-500'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-purple-400" />
+                <span>Analytics & Real-Time</span>
+              </button>
+
               <button
                 onClick={() => {
                   setActiveTab('add');
@@ -314,6 +331,24 @@ export const AdminPanelModal = ({
 
         {/* Tab Body Contents */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
+          {/* TAB: ANALYTICS DASHBOARD */}
+          {activeTab === 'analytics' && (
+            <AnalyticsDashboard
+              games={games}
+              categories={categories}
+              currentUser={currentUser}
+              onOpenGame={(g) => {
+                onClose();
+              }}
+              onEditGame={(g) => {
+                handleStartEdit(g);
+                setActiveTab('add');
+              }}
+              onToggleFeatured={onToggleFeatured}
+              onDeleteGame={onDeleteGame}
+            />
+          )}
+
           {/* TAB: BULK GAME UPLOAD */}
           {activeTab === 'bulk' && (
             <BulkGameUpload
