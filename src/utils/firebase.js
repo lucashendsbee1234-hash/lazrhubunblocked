@@ -8,6 +8,10 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  addDoc,
+  query,
+  orderBy,
+  limit,
   onSnapshot,
   increment,
 } from 'firebase/firestore';
@@ -309,6 +313,185 @@ export const rateGameInDb = async (gameId, starRating, previousRating = null) =>
     }
   } catch (err) {
     handleFirestoreError(err, 'write', `${GAMES_COLLECTION}/${gameId}`);
+  }
+};
+
+const CHAT_COLLECTION = 'chatMessages';
+const CHAT_MODERATION_DOC = 'chatModeration';
+const CHAT_REPORTS_COLLECTION = 'chatReports';
+
+// ----------------------------------------------------
+// Real-time Live Chat Functions
+// ----------------------------------------------------
+
+// Subscribe to real-time chat messages
+export const subscribeToChatMessages = (callback) => {
+  const chatRef = collection(db, CHAT_COLLECTION);
+  const q = query(chatRef, orderBy('timestamp', 'asc'), limit(150));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const messages = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      callback(messages);
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', CHAT_COLLECTION);
+      callback([]);
+    }
+  );
+};
+
+// Send a new chat message
+export const sendChatMessageToDb = async (msgData) => {
+  try {
+    const chatRef = collection(db, CHAT_COLLECTION);
+    const docRef = await addDoc(chatRef, {
+      text: msgData.text,
+      userEmail: msgData.userEmail || 'guest@lazrhub.com',
+      userName: msgData.userName || 'Gamer',
+      userAvatar: msgData.userAvatar || '🎮',
+      userRole: msgData.userRole || 'user',
+      timestamp: msgData.timestamp || new Date().toISOString(),
+      isPinned: Boolean(msgData.isPinned),
+      isSystemMsg: Boolean(msgData.isSystemMsg),
+      flaggedReason: msgData.flaggedReason || null,
+    });
+    return docRef.id;
+  } catch (err) {
+    handleFirestoreError(err, 'write', CHAT_COLLECTION);
+  }
+};
+
+// Delete a chat message (Admin)
+export const deleteChatMessageFromDb = async (msgId) => {
+  if (!msgId) return;
+  try {
+    await deleteDoc(doc(db, CHAT_COLLECTION, msgId));
+  } catch (err) {
+    handleFirestoreError(err, 'delete', `${CHAT_COLLECTION}/${msgId}`);
+  }
+};
+
+// Clear all chat messages (Admin)
+export const clearAllChatMessagesInDb = async () => {
+  try {
+    const chatRef = collection(db, CHAT_COLLECTION);
+    const snapshot = await getDocs(chatRef);
+    for (const d of snapshot.docs) {
+      await deleteDoc(doc(db, CHAT_COLLECTION, d.id));
+    }
+  } catch (err) {
+    handleFirestoreError(err, 'delete', CHAT_COLLECTION);
+  }
+};
+
+// Subscribe to Chat Moderation settings (Bans, Timeouts, Slow Mode, AI Moderation toggle)
+export const subscribeToChatModeration = (callback) => {
+  const modRef = doc(db, SETTINGS_COLLECTION, CHAT_MODERATION_DOC);
+  return onSnapshot(
+    modRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        callback({
+          bannedEmails: data.bannedEmails || [],
+          timedOutUsers: data.timedOutUsers || {}, // { "email@example.com": "2026-07-25T22:00:00Z" }
+          slowModeSeconds: data.slowModeSeconds || 0,
+          aiModerationEnabled: data.aiModerationEnabled !== undefined ? data.aiModerationEnabled : true,
+          pinnedMessage: data.pinnedMessage || null,
+        });
+      } else {
+        callback({
+          bannedEmails: [],
+          timedOutUsers: {},
+          slowModeSeconds: 0,
+          aiModerationEnabled: true,
+          pinnedMessage: null,
+        });
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', `${SETTINGS_COLLECTION}/${CHAT_MODERATION_DOC}`);
+      callback({
+        bannedEmails: [],
+        timedOutUsers: {},
+        slowModeSeconds: 0,
+        aiModerationEnabled: true,
+        pinnedMessage: null,
+      });
+    }
+  );
+};
+
+// Save Chat Moderation Settings
+export const saveChatModerationToDb = async (modData) => {
+  try {
+    await setDoc(
+      doc(db, SETTINGS_COLLECTION, CHAT_MODERATION_DOC),
+      {
+        bannedEmails: modData.bannedEmails || [],
+        timedOutUsers: modData.timedOutUsers || {},
+        slowModeSeconds: modData.slowModeSeconds !== undefined ? modData.slowModeSeconds : 0,
+        aiModerationEnabled: modData.aiModerationEnabled !== undefined ? modData.aiModerationEnabled : true,
+        pinnedMessage: modData.pinnedMessage || null,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    handleFirestoreError(err, 'write', `${SETTINGS_COLLECTION}/${CHAT_MODERATION_DOC}`);
+  }
+};
+
+// Report a chat message for admin review
+export const reportChatMessageToDb = async (reportData) => {
+  try {
+    const reportRef = collection(db, CHAT_REPORTS_COLLECTION);
+    await addDoc(reportRef, {
+      messageId: reportData.messageId,
+      messageText: reportData.messageText,
+      reportedUserEmail: reportData.reportedUserEmail,
+      reportedUserName: reportData.reportedUserName,
+      reporterEmail: reportData.reporterEmail || 'Guest',
+      reason: reportData.reason || 'Inappropriate content',
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+    });
+  } catch (err) {
+    handleFirestoreError(err, 'write', CHAT_REPORTS_COLLECTION);
+  }
+};
+
+// Subscribe to Chat Reports for Admin
+export const subscribeToChatReports = (callback) => {
+  const reportsRef = collection(db, CHAT_REPORTS_COLLECTION);
+  return onSnapshot(
+    reportsRef,
+    (snapshot) => {
+      const reports = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
+      callback(reports);
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', CHAT_REPORTS_COLLECTION);
+      callback([]);
+    }
+  );
+};
+
+// Delete / Resolve Chat Report
+export const deleteChatReportFromDb = async (reportId) => {
+  if (!reportId) return;
+  try {
+    await deleteDoc(doc(db, CHAT_REPORTS_COLLECTION, reportId));
+  } catch (err) {
+    handleFirestoreError(err, 'delete', `${CHAT_REPORTS_COLLECTION}/${reportId}`);
   }
 };
 

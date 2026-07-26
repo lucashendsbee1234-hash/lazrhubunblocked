@@ -25,6 +25,12 @@ import {
   ClipboardList,
   BarChart3,
   Image as ImageIcon,
+  MessageSquare,
+  ShieldAlert,
+  Ban,
+  Clock,
+  Flag,
+  UserX,
 } from 'lucide-react';
 
 export const AdminPanelModal = ({
@@ -44,12 +50,19 @@ export const AdminPanelModal = ({
   categories,
   onOpenSiteLogoModal,
   siteLogos,
+  moderation = {},
+  onSaveModeration,
+  chatReports = [],
+  onDeleteReport,
+  onSendMessage,
+  onClearChat,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
   const [activeTab, setActiveTab] = useState(isAdmin ? 'analytics' : 'profile'); // 'analytics', 'add', 'bulk', 'catalog', 'settings', 'profile'
   const [editingGame, setEditingGame] = useState(null);
   const [searchCatalogQuery, setSearchCatalogQuery] = useState('');
   const [announcementInput, setAnnouncementInput] = useState(announcement || '');
+  const [chatBroadcastText, setChatBroadcastText] = useState('');
   const [savedNotice, setSavedNotice] = useState('');
   const [deletingGameId, setDeletingGameId] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -327,6 +340,25 @@ export const AdminPanelModal = ({
               >
                 <Settings className="w-4 h-4" />
                 <span>Website Control</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('chatMod')}
+                className={`px-4 py-2.5 rounded-t-xl text-xs font-bold flex items-center space-x-2 transition-all whitespace-nowrap border-b-2 ${
+                  activeTab === 'chatMod'
+                    ? 'bg-purple-900/30 text-purple-300 border-purple-500'
+                    : 'text-slate-400 hover:text-slate-200 border-transparent'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4 text-purple-400" />
+                <span className="flex items-center space-x-1.5">
+                  <span>Chat Moderation</span>
+                  {chatReports.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-black font-black text-[10px]">
+                      {chatReports.length}
+                    </span>
+                  )}
+                </span>
               </button>
             </>
           )}
@@ -867,6 +899,333 @@ export const AdminPanelModal = ({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: LIVE CHAT MODERATION */}
+          {activeTab === 'chatMod' && (
+            <div className="space-y-6 max-w-4xl mx-auto">
+              
+              {/* Header Card */}
+              <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black text-white flex items-center space-x-2">
+                    <MessageSquare className="w-4 h-4 text-purple-400" />
+                    <span>Real-Time Live Chat & AI Moderation Hub</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Control automated AI safety filters, slow mode delays, user bans, timeouts, and review community reports.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to purge all live chat history for all users?')) {
+                      onClearChat();
+                      showFeedback('Live Chat history purged!');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-800/60 text-red-300 text-xs font-bold flex items-center space-x-2 shrink-0 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 text-red-400" />
+                  <span>Purge Chat History</span>
+                </button>
+              </div>
+
+              {/* Grid 1: Global Chat Controls & Broadcast */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* AI Safety Guard & Slow Mode */}
+                <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-4">
+                  <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+                    <span className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                      <ShieldAlert className="w-4 h-4 text-purple-400" />
+                      <span>Safety Engine & Settings</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                      ACTIVE
+                    </span>
+                  </div>
+
+                  {/* AI Filter Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <div>
+                      <span className="text-xs font-bold text-white block">AI Automated Content Filter</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">Blocks slurs, severe profanity, hate speech & threats</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSaveModeration({
+                          ...moderation,
+                          aiModerationEnabled: !moderation.aiModerationEnabled,
+                        });
+                        showFeedback('AI Moderation setting saved!');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl font-black text-xs transition-colors ${
+                        moderation?.aiModerationEnabled !== false
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {moderation?.aiModerationEnabled !== false ? 'ENABLED' : 'DISABLED'}
+                    </button>
+                  </div>
+
+                  {/* Slow Mode Delay */}
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white flex items-center space-x-1.5">
+                        <Clock className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Chat Slow Mode Delay</span>
+                      </span>
+                      <span className="text-xs font-black text-purple-300">
+                        {moderation?.slowModeSeconds ? `${moderation.slowModeSeconds}s` : 'Off'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      {[0, 3, 5, 10, 30].map((sec) => (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => {
+                            onSaveModeration({
+                              ...moderation,
+                              slowModeSeconds: sec,
+                            });
+                            showFeedback(`Slow Mode updated to ${sec ? `${sec}s` : 'Off'}`);
+                          }}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            (moderation?.slowModeSeconds || 0) === sec
+                              ? 'bg-purple-600 text-white shadow-md'
+                              : 'bg-slate-800 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {sec === 0 ? 'Off' : `${sec}s`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Admin Broadcast System Message */}
+                <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-4">
+                  <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+                    <span className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                      <Megaphone className="w-4 h-4 text-purple-400" />
+                      <span>Broadcast to Live Chat</span>
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-400">
+                    Send an official system message directly into the live chat feed for all online visitors.
+                  </p>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!chatBroadcastText.trim()) return;
+                      onSendMessage({
+                        text: `📢 ADMIN BROADCAST: ${chatBroadcastText.trim()}`,
+                        userEmail: 'system@lazrhub.com',
+                        userName: 'System Admin',
+                        userAvatar: '👑',
+                        userRole: 'system',
+                        isSystemMsg: true,
+                      });
+                      setChatBroadcastText('');
+                      showFeedback('Broadcast message posted to Live Chat!');
+                    }}
+                    className="space-y-3"
+                  >
+                    <input
+                      type="text"
+                      value={chatBroadcastText}
+                      onChange={(e) => setChatBroadcastText(e.target.value)}
+                      placeholder="e.g. New game added! Check out Retro Racer 3D."
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={!chatBroadcastText.trim()}
+                      className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all"
+                    >
+                      Send Admin Chat Broadcast
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+
+              {/* User Reports Queue */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-4">
+                <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+                  <span className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                    <Flag className="w-4 h-4 text-amber-400" />
+                    <span>User Chat Reports ({chatReports.length})</span>
+                  </span>
+                  {chatReports.length === 0 && (
+                    <span className="text-[10px] text-slate-500 font-bold">No active reports</span>
+                  )}
+                </div>
+
+                {chatReports.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-3 text-center italic">
+                    Great news! No pending user reports in the queue.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {chatReports.map((report) => (
+                      <div
+                        key={report.id}
+                        className="p-3.5 rounded-xl bg-slate-900 border border-purple-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-amber-300">
+                              Reported User: {report.reportedUserName} ({report.reportedUserEmail})
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-400 font-bold text-[10px] border border-amber-800/40">
+                              {report.reason}
+                            </span>
+                          </div>
+                          <p className="text-slate-200 bg-slate-950 p-2 rounded-lg font-mono text-[11px] border border-slate-800">
+                            "{report.messageText}"
+                          </p>
+                          <span className="text-[10px] text-slate-500 block">
+                            Reported by {report.reporterEmail}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center space-x-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentBanned = moderation?.bannedEmails || [];
+                              if (!currentBanned.includes(report.reportedUserEmail?.toLowerCase())) {
+                                onSaveModeration({
+                                  ...moderation,
+                                  bannedEmails: [...currentBanned, report.reportedUserEmail.toLowerCase()],
+                                });
+                              }
+                              onDeleteReport(report.id);
+                              showFeedback(`Banned ${report.reportedUserName} and resolved report.`);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 font-bold text-[11px] flex items-center space-x-1"
+                          >
+                            <Ban className="w-3 h-3 text-red-400" />
+                            <span>Ban User</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onDeleteReport(report.id);
+                              showFeedback('Report dismissed.');
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[11px]"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Banned & Timed-Out Users List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Banned Users */}
+                <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3">
+                  <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+                    <span className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                      <Ban className="w-4 h-4 text-red-400" />
+                      <span>Banned Users ({ (moderation?.bannedEmails || []).length })</span>
+                    </span>
+                  </div>
+
+                  {(moderation?.bannedEmails || []).length === 0 ? (
+                    <p className="text-xs text-slate-500 py-3 text-center italic">No banned users.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {(moderation.bannedEmails || []).map((email) => (
+                        <div
+                          key={email}
+                          className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
+                        >
+                          <span className="font-mono text-slate-300 truncate">{email}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = (moderation.bannedEmails || []).filter((e) => e !== email);
+                              onSaveModeration({
+                                ...moderation,
+                                bannedEmails: updated,
+                              });
+                              showFeedback(`Unbanned ${email}`);
+                            }}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[10px]"
+                          >
+                            Unban
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Timed Out Users */}
+                <div className="p-5 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3">
+                  <div className="flex items-center justify-between border-b border-purple-900/30 pb-3">
+                    <span className="text-xs font-black text-white uppercase tracking-wider flex items-center space-x-1.5">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      <span>Timed-Out Users ({ Object.keys(moderation?.timedOutUsers || {}).length })</span>
+                    </span>
+                  </div>
+
+                  {Object.keys(moderation?.timedOutUsers || {}).length === 0 ? (
+                    <p className="text-xs text-slate-500 py-3 text-center italic">No active timeouts.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {Object.entries(moderation.timedOutUsers || {}).map(([email, untilTime]) => (
+                        <div
+                          key={email}
+                          className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
+                        >
+                          <div className="truncate pr-2">
+                            <span className="font-mono text-slate-300 block truncate">{email}</span>
+                            <span className="text-[10px] text-amber-400">
+                              Until {new Date(untilTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const copy = { ...moderation.timedOutUsers };
+                              delete copy[email];
+                              onSaveModeration({
+                                ...moderation,
+                                timedOutUsers: copy,
+                              });
+                              showFeedback(`Removed timeout for ${email}`);
+                            }}
+                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[10px] shrink-0"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
             </div>
           )}
 

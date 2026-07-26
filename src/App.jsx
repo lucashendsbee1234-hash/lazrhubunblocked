@@ -14,6 +14,7 @@ import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 import { AdminPanelModal } from './components/AdminPanelModal';
 import { SiteLogoModal } from './components/SiteLogoModal';
+import { LiveChatWidget } from './components/LiveChatWidget';
 
 import {
   getStoredFavorites,
@@ -37,6 +38,15 @@ import {
   saveSiteLogosToDb,
   recordGamePlayInDb,
   rateGameInDb,
+  subscribeToChatMessages,
+  sendChatMessageToDb,
+  deleteChatMessageFromDb,
+  clearAllChatMessagesInDb,
+  subscribeToChatModeration,
+  saveChatModerationToDb,
+  reportChatMessageToDb,
+  subscribeToChatReports,
+  deleteChatReportFromDb,
 } from './utils/firebase';
 import {
   initAnalyticsSession,
@@ -72,7 +82,18 @@ export default function App() {
     footerLogo: '/logo.png',
   });
 
-  // Real-time Firestore sync for games, announcements, logos + Real Analytics Session Init
+  // Live Chat & Moderation State
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatModeration, setChatModeration] = useState({
+    bannedEmails: [],
+    timedOutUsers: {},
+    slowModeSeconds: 0,
+    aiModerationEnabled: true,
+    pinnedMessage: null,
+  });
+  const [chatReports, setChatReports] = useState([]);
+
+  // Real-time Firestore sync for games, announcements, logos, live chat + Real Analytics Session Init
   useEffect(() => {
     // 0. Initialize Real Analytics Session and Heartbeat
     let cleanupSession;
@@ -97,6 +118,21 @@ export default function App() {
       setSiteLogos(logos);
     });
 
+    // 4. Subscribe to real-time Live Chat messages
+    const unsubscribeChat = subscribeToChatMessages((msgList) => {
+      setChatMessages(msgList || []);
+    });
+
+    // 5. Subscribe to real-time Live Chat moderation settings
+    const unsubscribeMod = subscribeToChatModeration((modData) => {
+      if (modData) setChatModeration(modData);
+    });
+
+    // 6. Subscribe to user chat reports
+    const unsubscribeReports = subscribeToChatReports((repList) => {
+      setChatReports(repList || []);
+    });
+
     // 4. Favorites & History from local storage
     setFavorites(getStoredFavorites().map(String));
     setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => String(item.gameId)));
@@ -116,6 +152,9 @@ export default function App() {
       unsubscribeGames();
       unsubscribeAnnouncement();
       unsubscribeLogos();
+      unsubscribeChat();
+      unsubscribeMod();
+      unsubscribeReports();
       if (cleanupSession) cleanupSession();
     };
   }, []);
@@ -597,6 +636,12 @@ export default function App() {
         categories={categoriesData}
         onOpenSiteLogoModal={() => setIsSiteLogoModalOpen(true)}
         siteLogos={siteLogos}
+        moderation={chatModeration}
+        onSaveModeration={saveChatModerationToDb}
+        chatReports={chatReports}
+        onDeleteReport={deleteChatReportFromDb}
+        onSendMessage={sendChatMessageToDb}
+        onClearChat={clearAllChatMessagesInDb}
       />
 
       {/* Site Profile Pictures & Logo Customizer Modal */}
@@ -605,6 +650,19 @@ export default function App() {
         onClose={() => setIsSiteLogoModalOpen(false)}
         siteLogos={siteLogos}
         onSaveSiteLogos={handleSaveSiteLogos}
+      />
+
+      {/* Live Chat Floating Widget */}
+      <LiveChatWidget
+        currentUser={currentUser}
+        messages={chatMessages}
+        moderation={chatModeration}
+        onSendMessage={sendChatMessageToDb}
+        onDeleteMessage={deleteChatMessageFromDb}
+        onClearChat={clearAllChatMessagesInDb}
+        onSaveModeration={saveChatModerationToDb}
+        onReportMessage={reportChatMessageToDb}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
 
       {/* Footer */}
