@@ -34,6 +34,7 @@ const GAMES_COLLECTION = 'games';
 const SETTINGS_COLLECTION = 'siteSettings';
 const ANNOUNCEMENT_DOC = 'globalAnnouncement';
 const LOGOS_DOC = 'siteLogos';
+const DELETED_TAGS_DOC = 'deletedTags';
 
 export const handleFirestoreError = (error, operationType, path) => {
   const errInfo = {
@@ -220,6 +221,56 @@ export const saveSiteLogosToDb = async (logos) => {
     );
   } catch (err) {
     handleFirestoreError(err, 'write', `${SETTINGS_COLLECTION}/${LOGOS_DOC}`);
+  }
+};
+
+// Subscribe to real-time deleted tags list
+export const subscribeToDeletedTags = (callback) => {
+  const tagsRef = doc(db, SETTINGS_COLLECTION, DELETED_TAGS_DOC);
+  return onSnapshot(
+    tagsRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        callback(docSnap.data().tags || []);
+      } else {
+        callback([]);
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, 'get', `${SETTINGS_COLLECTION}/${DELETED_TAGS_DOC}`);
+      callback([]);
+    }
+  );
+};
+
+// Delete tag in Firestore across all games and save to deletedTags settings
+export const deleteTagInDb = async (tagToDelete) => {
+  if (!tagToDelete) return;
+  try {
+    // 1. Save to deletedTags list in siteSettings
+    const tagsRef = doc(db, SETTINGS_COLLECTION, DELETED_TAGS_DOC);
+    const snap = await getDoc(tagsRef);
+    let existingDeleted = [];
+    if (snap.exists()) {
+      existingDeleted = snap.data().tags || [];
+    }
+    if (!existingDeleted.includes(tagToDelete)) {
+      await setDoc(tagsRef, { tags: [...existingDeleted, tagToDelete] }, { merge: true });
+    }
+
+    // 2. Remove tag from all existing games in Firestore
+    const gamesRef = collection(db, GAMES_COLLECTION);
+    const snapshot = await getDocs(gamesRef);
+    for (const d of snapshot.docs) {
+      const gData = d.data();
+      if (gData.tags && Array.isArray(gData.tags) && gData.tags.includes(tagToDelete)) {
+        const updatedTags = gData.tags.filter((t) => t !== tagToDelete);
+        await updateDoc(doc(db, GAMES_COLLECTION, d.id), { tags: updatedTags });
+      }
+    }
+  } catch (err) {
+    handleFirestoreError(err, 'write', `${SETTINGS_COLLECTION}/${DELETED_TAGS_DOC}`);
+    throw err;
   }
 };
 

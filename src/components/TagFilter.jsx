@@ -7,8 +7,11 @@ export const TagFilter = ({
   onToggleTag,
   onClearTags,
   tagCounts,
+  currentUser,
+  onDeleteTag,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const isAdmin = currentUser?.role === 'admin';
 
   const displayedTags = isExpanded ? availableTags : availableTags.slice(0, 10);
 
@@ -52,10 +55,9 @@ export const TagFilter = ({
           const isPopularTag = tag.toLowerCase() === 'popular';
 
           return (
-            <button
+            <div
               key={tag}
-              onClick={() => onToggleTag(tag)}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 border ${
+              className={`inline-flex items-center rounded-xl text-xs font-semibold transition-all border overflow-hidden ${
                 isSelected
                   ? 'bg-purple-600 text-white border-purple-500 shadow-sm shadow-purple-600/30'
                   : isPopularTag
@@ -63,12 +65,33 @@ export const TagFilter = ({
                   : 'bg-slate-950 text-slate-300 border border-purple-900/40 hover:border-purple-500/50'
               }`}
             >
-              {isPopularTag ? (
-                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              ) : null}
-              <span>#{tag}</span>
-              <span className="text-[10px] opacity-70 font-mono">({count})</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => onToggleTag(tag)}
+                className="px-3 py-1 flex items-center space-x-1.5 focus:outline-none"
+              >
+                {isPopularTag ? (
+                  <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                ) : null}
+                <span>#{tag}</span>
+                <span className="text-[10px] opacity-70 font-mono">({count})</span>
+              </button>
+
+              {isAdmin && onDeleteTag && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onDeleteTag(tag);
+                  }}
+                  className="pr-2.5 pl-0.5 py-1 text-slate-400 hover:text-red-400 transition-colors focus:outline-none"
+                  title={`Delete tag #${tag}`}
+                >
+                  <X className="w-3.5 h-3.5 p-0.5 rounded-full hover:bg-red-500/20" />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>

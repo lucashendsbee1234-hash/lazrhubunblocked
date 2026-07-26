@@ -47,6 +47,8 @@ import {
   reportChatMessageToDb,
   subscribeToChatReports,
   deleteChatReportFromDb,
+  subscribeToDeletedTags,
+  deleteTagInDb,
 } from './utils/firebase';
 import {
   initAnalyticsSession,
@@ -92,6 +94,7 @@ export default function App() {
     pinnedMessage: null,
   });
   const [chatReports, setChatReports] = useState([]);
+  const [deletedTags, setDeletedTags] = useState([]);
 
   // Real-time Firestore sync for games, announcements, logos, live chat + Real Analytics Session Init
   useEffect(() => {
@@ -133,6 +136,11 @@ export default function App() {
       setChatReports(repList || []);
     });
 
+    // 7. Subscribe to deleted tags
+    const unsubscribeDeletedTags = subscribeToDeletedTags((tags) => {
+      setDeletedTags(tags || []);
+    });
+
     // 4. Favorites & History from local storage
     setFavorites(getStoredFavorites().map(String));
     setRecentlyPlayedIds(getStoredRecentlyPlayed().map((item) => String(item.gameId)));
@@ -155,6 +163,7 @@ export default function App() {
       unsubscribeChat();
       unsubscribeMod();
       unsubscribeReports();
+      unsubscribeDeletedTags();
       if (cleanupSession) cleanupSession();
     };
   }, []);
@@ -424,13 +433,29 @@ export default function App() {
   const availableTags = useMemo(() => {
     const set = new Set(['popular', ...defaultTagsData]);
     games.forEach((g) => (g.tags || []).forEach((t) => set.add(t)));
-    return Array.from(set);
-  }, [games]);
+    return Array.from(set).filter((t) => !deletedTags.includes(t));
+  }, [games, deletedTags]);
 
   const handleToggleTag = useCallback((tag) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+  }, []);
+
+  const handleDeleteTag = useCallback(async (tagToDelete) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tagToDelete));
+    setDeletedTags((prev) => [...prev, tagToDelete]);
+    setGames((prevGames) =>
+      prevGames.map((g) => ({
+        ...g,
+        tags: (g.tags || []).filter((t) => t !== tagToDelete),
+      }))
+    );
+    try {
+      await deleteTagInDb(tagToDelete);
+    } catch (err) {
+      console.error('Failed to delete tag:', err);
+    }
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -574,6 +599,8 @@ export default function App() {
           onToggleTag={handleToggleTag}
           onClearTags={() => setSelectedTags([])}
           tagCounts={tagCounts}
+          currentUser={currentUser}
+          onDeleteTag={handleDeleteTag}
         />
 
         {/* Main Games Grid */}
