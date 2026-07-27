@@ -498,6 +498,23 @@ export const saveStoredAnnouncement = (text) => {
   }
 };
 
+export const GUEST_ID_KEY = 'unblocked_vault_guest_id';
+
+export const getOrCreateGuestId = () => {
+  try {
+    let id = localStorage.getItem(GUEST_ID_KEY);
+    if (id && /^\d{4}$/.test(id)) {
+      return id;
+    }
+    // Generate a random 4-digit guest number string between 1000 and 9999
+    id = String(Math.floor(1000 + Math.random() * 9000));
+    localStorage.setItem(GUEST_ID_KEY, id);
+    return id;
+  } catch {
+    return '1000';
+  }
+};
+
 export const getStoredUserAuth = () => {
   try {
     const data = localStorage.getItem(USER_AUTH_KEY);

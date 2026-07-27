@@ -1153,28 +1153,34 @@ export const AdminPanelModal = ({
                     <p className="text-xs text-slate-500 py-3 text-center italic">No banned users.</p>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                      {(moderation.bannedEmails || []).map((email) => (
-                        <div
-                          key={email}
-                          className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
-                        >
-                          <span className="font-mono text-slate-300 truncate">{email}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = (moderation.bannedEmails || []).filter((e) => e !== email);
-                              onSaveModeration({
-                                ...moderation,
-                                bannedEmails: updated,
-                              });
-                              showFeedback(`Unbanned ${email}`);
-                            }}
-                            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[10px]"
+                      {(moderation.bannedEmails || []).map((email) => {
+                        const isGuest = email.startsWith('guest_');
+                        const guestNum = isGuest ? email.split('@')[0].replace('guest_', '') : '';
+                        return (
+                          <div
+                            key={email}
+                            className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
                           >
-                            Unban
-                          </button>
-                        </div>
-                      ))}
+                            <span className="font-mono text-slate-300 truncate">
+                              {isGuest ? `Guest #${guestNum} (${email})` : email}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (moderation.bannedEmails || []).filter((e) => e !== email);
+                                onSaveModeration({
+                                  ...moderation,
+                                  bannedEmails: updated,
+                                });
+                                showFeedback(`Unbanned ${isGuest ? `Guest #${guestNum}` : email}`);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[10px] shrink-0 ml-2"
+                            >
+                              Unban
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

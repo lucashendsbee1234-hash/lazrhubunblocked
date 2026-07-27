@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { evaluateMessageSafety, formatChatTimestamp } from '../utils/chatModerator';
+import { getOrCreateGuestId } from '../utils/storage';
 
 const AVATAR_OPTIONS = ['🎮', '⚡', '👾', '🐉', '🚀', '💎', '👑', '🔥', '🦊', '🤖', '🎯', '🐱'];
 
@@ -42,8 +43,23 @@ export const LiveChatWidget = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [lastReadMsgId, setLastReadMsgId] = useState('');
   
+  // Persistent 4-digit Guest ID for unauthenticated device
+  const guestId = getOrCreateGuestId();
+  const defaultGuestName = `Guest #${guestId}`;
+  const defaultGuestEmail = `guest_${guestId}@lazrhub.com`;
+
+  const userEmail = currentUser?.email || defaultGuestEmail;
+
   // User Chat Profile state
-  const [userNickname, setUserNickname] = useState(currentUser?.username || 'Gamer');
+  const [userNickname, setUserNickname] = useState(() => {
+    if (currentUser?.username) return currentUser.username;
+    try {
+      const saved = localStorage.getItem('unblocked_vault_guest_nickname');
+      return saved || defaultGuestName;
+    } catch {
+      return defaultGuestName;
+    }
+  });
   const [userAvatar, setUserAvatar] = useState('🎮');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
@@ -62,7 +78,6 @@ export const LiveChatWidget = ({
 
   const messagesEndRef = useRef(null);
   const isAdmin = currentUser?.role === 'admin';
-  const userEmail = currentUser?.email || 'guest@lazrhub.com';
 
   // Check if current user is banned or timed out
   const isBanned = (moderation?.bannedEmails || []).includes(userEmail.toLowerCase());
@@ -102,8 +117,15 @@ export const LiveChatWidget = ({
   useEffect(() => {
     if (currentUser?.username) {
       setUserNickname(currentUser.username);
+    } else {
+      try {
+        const saved = localStorage.getItem('unblocked_vault_guest_nickname');
+        setUserNickname(saved || defaultGuestName);
+      } catch {
+        setUserNickname(defaultGuestName);
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, defaultGuestName]);
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -203,11 +225,20 @@ export const LiveChatWidget = ({
   };
 
   const handleTimeoutUser = (msgUserEmail, msgUserName, durationMinutes = 5) => {
-    if (!msgUserEmail) return;
+    let emailToTimeout = msgUserEmail;
+    if (!emailToTimeout || emailToTimeout.toLowerCase() === 'guest@lazrhub.com') {
+      const match = (msgUserName || '').match(/\d{4}/);
+      if (match) {
+        emailToTimeout = `guest_${match[0]}@lazrhub.com`;
+      } else {
+        emailToTimeout = 'guest@lazrhub.com';
+      }
+    }
+
     const timeoutUntil = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
     const updatedTimeouts = {
       ...(moderation.timedOutUsers || {}),
-      [msgUserEmail.toLowerCase()]: timeoutUntil,
+      [emailToTimeout.toLowerCase()]: timeoutUntil,
     };
     onSaveModeration({
       ...moderation,
@@ -216,7 +247,7 @@ export const LiveChatWidget = ({
 
     // Post system message
     onSendMessage({
-      text: `⏱️ Admin timed out ${msgUserName} for ${durationMinutes} minutes.`,
+      text: `⏱️ Admin timed out ${msgUserName || emailToTimeout} for ${durationMinutes} minutes.`,
       userEmail: 'system@lazrhub.com',
       userName: 'System',
       userAvatar: '🛡️',
@@ -227,18 +258,27 @@ export const LiveChatWidget = ({
   };
 
   const handleBanUser = (msgUserEmail, msgUserName) => {
-    if (!msgUserEmail) return;
-    const currentBanned = moderation?.bannedEmails || [];
-    if (currentBanned.includes(msgUserEmail.toLowerCase())) return;
+    let emailToBan = msgUserEmail;
+    if (!emailToBan || emailToBan.toLowerCase() === 'guest@lazrhub.com') {
+      const match = (msgUserName || '').match(/\d{4}/);
+      if (match) {
+        emailToBan = `guest_${match[0]}@lazrhub.com`;
+      } else {
+        emailToBan = 'guest@lazrhub.com';
+      }
+    }
 
-    const updatedBanned = [...currentBanned, msgUserEmail.toLowerCase()];
+    const currentBanned = moderation?.bannedEmails || [];
+    if (currentBanned.includes(emailToBan.toLowerCase())) return;
+
+    const updatedBanned = [...currentBanned, emailToBan.toLowerCase()];
     onSaveModeration({
       ...moderation,
       bannedEmails: updatedBanned,
     });
 
     onSendMessage({
-      text: `🚫 Admin banned ${msgUserName} from Live Chat.`,
+      text: `🚫 Admin banned ${msgUserName || emailToBan} from Live Chat.`,
       userEmail: 'system@lazrhub.com',
       userName: 'System',
       userAvatar: '🛡️',
@@ -413,7 +453,14 @@ export const LiveChatWidget = ({
           {isEditingProfile && (
             <div className="p-3 bg-slate-900 border-b border-purple-900/40 text-xs space-y-3 shrink-0 animate-fadeIn">
               <div className="flex items-center justify-between text-purple-200 font-bold">
-                <span>Customize Chat Identity</span>
+                <span className="flex items-center space-x-2">
+                  <span>Customize Chat Identity</span>
+                  {!currentUser && (
+                    <span className="px-2 py-0.5 rounded-md bg-purple-950 border border-purple-700/50 text-[10px] text-purple-300 font-mono font-bold">
+                      Guest #{guestId}
+                    </span>
+                  )}
+                </span>
                 <button
                   onClick={() => setIsEditingProfile(false)}
                   className="text-[10px] text-slate-400 hover:text-white"
@@ -427,7 +474,17 @@ export const LiveChatWidget = ({
                 <input
                   type="text"
                   value={userNickname}
-                  onChange={(e) => setUserNickname(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setUserNickname(val);
+                    if (!currentUser) {
+                      try {
+                        localStorage.setItem('unblocked_vault_guest_nickname', val);
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }
+                  }}
                   maxLength={20}
                   placeholder="Enter nickname..."
                   className="w-full px-2.5 py-1.5 rounded-xl bg-slate-950 border border-purple-900/50 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
