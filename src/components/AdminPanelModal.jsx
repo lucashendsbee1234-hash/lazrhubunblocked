@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { extractIframeUrl, deriveTitleFromUrl, generateSmartGameMetadata } from '../utils/storage';
+import { autoTagGame } from '../utils/autoTagger';
 import { BulkGameUpload } from './BulkGameUpload';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import {
@@ -841,7 +842,26 @@ export const AdminPanelModal = ({
                 <p className="text-xs text-slate-400">
                   Export the active catalog as a JSON backup file or restore default catalog datasets.
                 </p>
-                <div className="flex items-center space-x-3 pt-1">
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      let tagCount = 0;
+                      for (const game of games) {
+                        const newTags = autoTagGame(game);
+                        if (JSON.stringify(newTags) !== JSON.stringify(game.tags)) {
+                          await onSaveGame({ ...game, tags: newTags });
+                          tagCount++;
+                        }
+                      }
+                      showFeedback(`Scanned ${games.length} games! Updated tags for ${tagCount} games.`);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white flex items-center space-x-2 transition-all shadow-md shadow-purple-600/20"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Auto-Scan & Re-Tag All Games</span>
+                  </button>
+
                   <button
                     onClick={handleExportJSON}
                     className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-purple-900/40 text-xs font-bold text-purple-300 flex items-center space-x-2"

@@ -11,7 +11,16 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": true,
-    "tags": ["physics", "driving", "action", "html5", "singleplayer"],
+    "tags": [
+      "physics",
+      "driving",
+      "action",
+      "singleplayer",
+      "racing",
+      "car",
+      "shooter",
+      "html5"
+    ],
     "author": "Pizza Edition",
     "controls": "Arrow keys or WASD to accelerate, brake, and lean."
   },
@@ -27,7 +36,20 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": true,
-    "tags": ["racing", "physics", "3d", "speed", "singleplayer"],
+    "tags": [
+      "racing",
+      "physics",
+      "speed",
+      "singleplayer",
+      "car",
+      "golf",
+      "action",
+      "shooter",
+      "quick-play",
+      "driving",
+      "3d",
+      "html5"
+    ],
     "author": "Pizza Edition",
     "controls": "WASD or Arrow keys to steer, Spacebar to brake, R to restart level."
   },
@@ -43,7 +65,19 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": true,
-    "tags": ["sports", "2-player", "basketball", "arcade", "quick-play"],
+    "tags": [
+      "sports",
+      "2-player",
+      "basketball",
+      "arcade",
+      "quick-play",
+      "puzzle",
+      "action",
+      "shooter",
+      "runner",
+      "endless",
+      "html5"
+    ],
     "author": "MadPuffers",
     "controls": "1P: WASD to move/jump, X for super shot, Z for dash. 2P: Arrow keys to move, K for super shot, L for dash."
   },
@@ -59,7 +93,18 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": false,
-    "tags": ["2-player", "physics", "sports", "random", "quick-play"],
+    "tags": [
+      "2-player",
+      "physics",
+      "sports",
+      "random",
+      "quick-play",
+      "basketball",
+      "puzzle",
+      "action",
+      "shooter",
+      "html5"
+    ],
     "author": "RHM Interactive",
     "controls": "Player 1: W key | Player 2: UP Arrow key. Hold to jump, bounce, and shoot!"
   },
@@ -75,7 +120,17 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": false,
-    "tags": ["casual", "endless", "physics", "score-attack", "smooth"],
+    "tags": [
+      "casual",
+      "endless",
+      "physics",
+      "score-attack",
+      "smooth",
+      "shooter",
+      "quick-play",
+      "singleplayer",
+      "html5"
+    ],
     "author": "Voodoo",
     "controls": "Click & hold Left Mouse Button or Spacebar to dive and accelerate down dune slopes."
   },
@@ -91,7 +146,20 @@
     "ratingCount": 0,
     "ratingSum": 0,
     "isFeatured": true,
-    "tags": ["management", "casual", "arcade", "strategy", "singleplayer"],
+    "tags": [
+      "management",
+      "casual",
+      "arcade",
+      "strategy",
+      "singleplayer",
+      "logic",
+      "shooter",
+      "runner",
+      "endless",
+      "puzzle",
+      "action",
+      "html5"
+    ],
     "author": "TinyDobbins",
     "controls": "WASD or Arrow keys to move your monkey around the market."
   }

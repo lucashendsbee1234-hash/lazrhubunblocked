@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import defaultGames from '../data/games.json';
+import { autoTagGame } from './autoTagger';
 
 const firebaseConfig = {
   projectId: firebaseConfigJson.projectId,
@@ -74,7 +75,11 @@ export const subscribeToGames = (callback) => {
 export const seedDefaultGames = async () => {
   try {
     for (const g of defaultGames) {
-      await setDoc(doc(db, GAMES_COLLECTION, g.id), g, { merge: true });
+      const tagged = {
+        ...g,
+        tags: autoTagGame(g),
+      };
+      await setDoc(doc(db, GAMES_COLLECTION, g.id), tagged, { merge: true });
     }
   } catch (err) {
     handleFirestoreError(err, 'write', GAMES_COLLECTION);
@@ -112,6 +117,8 @@ export const saveGameToDb = async (gameData) => {
         updatedAt: new Date().toISOString(),
       };
     }
+
+    cleanGame.tags = autoTagGame(cleanGame);
 
     await setDoc(gameRef, cleanGame, { merge: true });
     return cleanGame;
