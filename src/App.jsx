@@ -536,6 +536,7 @@ export default function App() {
           !showingFavoritesOnly &&
           !showingRecentlyPlayedOnly && (
             <HeroBanner
+              games={games}
               featuredGame={featuredGame}
               onPlayGame={handlePlayGame}
               onExploreClick={() => {
