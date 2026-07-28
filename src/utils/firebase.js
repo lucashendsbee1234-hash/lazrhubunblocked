@@ -14,6 +14,7 @@ import {
   limit,
   onSnapshot,
   increment,
+  writeBatch,
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 import defaultGames from '../data/games.json';
@@ -413,6 +414,11 @@ export const sendChatMessageToDb = async (msgData) => {
       userName: msgData.userName || 'Gamer',
       userAvatar: msgData.userAvatar || '🎮',
       userRole: msgData.userRole || 'user',
+      userLevel: msgData.userLevel || 1,
+      chatBadgeIcon: msgData.chatBadgeIcon || null,
+      chatTitleText: msgData.chatTitleText || null,
+      chatColorCss: msgData.chatColorCss || null,
+      chatBorderCss: msgData.chatBorderCss || null,
       timestamp: msgData.timestamp || new Date().toISOString(),
       isPinned: Boolean(msgData.isPinned),
       isSystemMsg: Boolean(msgData.isSystemMsg),
@@ -439,9 +445,17 @@ export const clearAllChatMessagesInDb = async () => {
   try {
     const chatRef = collection(db, CHAT_COLLECTION);
     const snapshot = await getDocs(chatRef);
-    for (const d of snapshot.docs) {
-      await deleteDoc(doc(db, CHAT_COLLECTION, d.id));
+    if (!snapshot.empty) {
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((d) => {
+        batch.delete(doc(db, CHAT_COLLECTION, d.id));
+      });
+      await batch.commit();
     }
+
+    // Also clear pinned message in chat moderation if set
+    const modRef = doc(db, SETTINGS_COLLECTION, CHAT_MODERATION_DOC);
+    await setDoc(modRef, { pinnedMessage: null }, { merge: true });
   } catch (err) {
     handleFirestoreError(err, 'delete', CHAT_COLLECTION);
   }

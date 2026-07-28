@@ -22,6 +22,7 @@ export const GameModal = ({
   relatedGames,
   onSelectGame,
   onRateGame,
+  onAwardPlayTime,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTheater, setIsTheater] = useState(false);
@@ -29,8 +30,48 @@ export const GameModal = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionPlayMinutes, setSessionPlayMinutes] = useState(0);
 
   const modalRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
+
+  // Activity listeners for Anti-AFK
+  useEffect(() => {
+    const handleUserActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+    window.addEventListener('mousemove', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('click', handleUserActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', handleUserActivity);
+      window.removeEventListener('keydown', handleUserActivity);
+      window.removeEventListener('click', handleUserActivity);
+    };
+  }, []);
+
+  // Play time accumulation timer (every 60 seconds)
+  useEffect(() => {
+    if (!game) return;
+
+    const timer = setInterval(() => {
+      const isDocumentVisible = !document.hidden;
+      const isUserActive = Date.now() - lastActivityRef.current < 120000; // 2 minutes AFK threshold
+
+      if (isDocumentVisible && isUserActive) {
+        setSessionPlayMinutes((prev) => {
+          const newMins = prev + 1;
+          if (onAwardPlayTime) {
+            onAwardPlayTime(game.id, 1, newMins);
+          }
+          return newMins;
+        });
+      }
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [game?.id, onAwardPlayTime]);
 
   useEffect(() => {
     if (!game) return;

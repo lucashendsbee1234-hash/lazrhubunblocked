@@ -23,12 +23,38 @@
       },
       "required": ["title", "iframeUrl"]
     },
+    "users": {
+      "title": "User Profiles",
+      "description": "User profile accounts, LazrCoins, XP, level, cosmetics, and achievements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string" },
+        "coins": { "type": "number" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" }
+      },
+      "required": ["email", "displayName"]
+    },
     "siteSettings": {
       "title": "Site Settings",
-      "description": "Global configurations including top site announcements",
+      "description": "Global configurations including top site announcements and moderation",
       "type": "object",
       "properties": {
         "announcement": { "type": "string" }
+      }
+    },
+    "chatMessages": {
+      "title": "Chat Messages",
+      "description": "Live chat room messages",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" }
       }
     }
   }

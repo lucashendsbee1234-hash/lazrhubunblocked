@@ -536,3 +536,139 @@ export const saveStoredUserAuth = (user) => {
   }
 };
 
+// COMMUNITY POLLS STORAGE
+const POLLS_KEY = 'lazrhub_community_polls';
+
+export const DEFAULT_INITIAL_POLL = {
+  id: 'poll-add-next-2026',
+  question: 'What should we add next?',
+  options: [
+    { id: 'opt-minecraft', text: 'Minecraft', votes: 0 },
+    { id: 'opt-roblox', text: 'Roblox', votes: 0 },
+    { id: 'opt-horror', text: 'More Horror Games', votes: 0 },
+    { id: 'opt-flash', text: 'Flash Games', votes: 0 },
+  ],
+  totalVotes: 0,
+  endsAt: new Date(Date.now() + 14 * 86400000).toISOString(),
+  isActive: true,
+  createdAt: new Date().toISOString(),
+};
+
+export const getStoredPolls = () => {
+  try {
+    const data = localStorage.getItem(POLLS_KEY);
+    if (data === null) return [DEFAULT_INITIAL_POLL];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [DEFAULT_INITIAL_POLL];
+  } catch {
+    return [DEFAULT_INITIAL_POLL];
+  }
+};
+
+export const saveStoredPolls = (polls) => {
+  try {
+    localStorage.setItem(POLLS_KEY, JSON.stringify(polls));
+    window.dispatchEvent(new Event('lazrhub_polls_updated'));
+  } catch (e) {
+    console.error('Failed to save polls', e);
+  }
+};
+
+export const getUserVotedOption = (pollId) => {
+  try {
+    return localStorage.getItem(`lazrhub_poll_voted_${pollId}`) || null;
+  } catch {
+    return null;
+  }
+};
+
+export const recordPollVote = (pollId, optionId) => {
+  const polls = getStoredPolls();
+  const pollIndex = polls.findIndex((p) => p.id === pollId);
+  if (pollIndex === -1) return polls;
+
+  const poll = { ...polls[pollIndex] };
+  const optIndex = poll.options.findIndex((o) => o.id === optionId);
+  if (optIndex === -1) return polls;
+
+  // Check if user already voted on this device
+  const existingVote = getUserVotedOption(pollId);
+  if (existingVote) {
+    return polls; // already voted
+  }
+
+  // Record vote
+  poll.options = poll.options.map((opt) =>
+    opt.id === optionId ? { ...opt, votes: (opt.votes || 0) + 1 } : opt
+  );
+  poll.totalVotes = (poll.totalVotes || 0) + 1;
+
+  polls[pollIndex] = poll;
+  saveStoredPolls(polls);
+
+  try {
+    localStorage.setItem(`lazrhub_poll_voted_${pollId}`, optionId);
+  } catch (e) {
+    console.error('Failed to set vote lock', e);
+  }
+
+  return polls;
+};
+
+// FAQ ITEMS STORAGE
+const FAQ_STORAGE_KEY = 'lazrhub_faq_items';
+
+export const getStoredFaqs = (defaultItems) => {
+  try {
+    const data = localStorage.getItem(FAQ_STORAGE_KEY);
+    if (data === null) return defaultItems || [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : defaultItems || [];
+  } catch {
+    return defaultItems || [];
+  }
+};
+
+export const saveStoredFaqs = (items) => {
+  try {
+    localStorage.setItem(FAQ_STORAGE_KEY, JSON.stringify(items));
+    window.dispatchEvent(new Event('lazrhub_faqs_updated'));
+  } catch (e) {
+    console.error('Failed to save FAQs', e);
+  }
+};
+
+export const incrementFaqViews = (faqId, defaultItems) => {
+  const current = getStoredFaqs(defaultItems);
+  const updated = current.map((item) =>
+    item.id === faqId ? { ...item, views: (item.views || 0) + 1 } : item
+  );
+  saveStoredFaqs(updated);
+  return updated;
+};
+
+export const voteFaqHelpfulness = (faqId, isHelpful, defaultItems) => {
+  const userKey = `lazrhub_faq_voted_${faqId}`;
+  try {
+    if (localStorage.getItem(userKey)) return getStoredFaqs(defaultItems); // Already voted
+    localStorage.setItem(userKey, isHelpful ? 'yes' : 'no');
+  } catch (e) {
+    console.error('Failed to save FAQ vote lock', e);
+  }
+
+  const current = getStoredFaqs(defaultItems);
+  const updated = current.map((item) => {
+    if (item.id === faqId) {
+      return {
+        ...item,
+        helpfulYes: isHelpful ? (item.helpfulYes || 0) + 1 : item.helpfulYes || 0,
+        helpfulNo: !isHelpful ? (item.helpfulNo || 0) + 1 : item.helpfulNo || 0,
+      };
+    }
+    return item;
+  });
+  saveStoredFaqs(updated);
+  return updated;
+};
+
+

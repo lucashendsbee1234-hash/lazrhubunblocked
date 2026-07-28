@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../utils/firebase';
 import {
   MessageSquare,
   X,
@@ -24,11 +26,14 @@ import {
 } from 'lucide-react';
 import { evaluateMessageSafety, formatChatTimestamp } from '../utils/chatModerator';
 import { getOrCreateGuestId } from '../utils/storage';
+import { COSMETIC_ITEMS } from '../data/cosmeticsData';
+import { incrementChatMessageCountInDb, getLevelFromXp } from '../utils/userManagement';
 
 const AVATAR_OPTIONS = ['🎮', '⚡', '👾', '🐉', '🚀', '💎', '👑', '🔥', '🦊', '🤖', '🎯', '🐱'];
 
 export const LiveChatWidget = ({
   currentUser,
+  userProfile,
   messages = [],
   moderation = {},
   onSendMessage,
@@ -37,6 +42,7 @@ export const LiveChatWidget = ({
   onSaveModeration,
   onReportMessage,
   onOpenAuth,
+  onOpenProfile,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -62,6 +68,30 @@ export const LiveChatWidget = ({
   });
   const [userAvatar, setUserAvatar] = useState('🎮');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Real-time synced map of user profiles from Firestore
+  const [userProfilesMap, setUserProfilesMap] = useState({});
+
+  useEffect(() => {
+    const usersRef = collection(db, 'users');
+    const unsubscribe = onSnapshot(
+      usersRef,
+      (snapshot) => {
+        const map = {};
+        snapshot.docs.forEach((d) => {
+          const data = d.data();
+          if (data.email) {
+            map[data.email.toLowerCase()] = data;
+          }
+        });
+        setUserProfilesMap(map);
+      },
+      (err) => {
+        console.error('Error syncing user profiles for chat:', err);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Moderation state
   const [lastSentTimestamp, setLastSentTimestamp] = useState(0);
@@ -193,15 +223,31 @@ export const LiveChatWidget = ({
     else if (currentUser) role = 'member';
     else role = 'guest';
 
+    // Get level & equipped chat cosmetics
+    const uLevel = userProfile?.level || (userProfile?.xp != null ? getLevelFromXp(userProfile.xp).level : null) || 1;
+    const chatColorObj = COSMETIC_ITEMS.find((c) => c.id === (userProfile?.equippedChatColor || userProfile?.equippedNameColor));
+    const chatBadgeObj = COSMETIC_ITEMS.find((c) => c.id === userProfile?.equippedChatBadge);
+    const chatTitleObj = COSMETIC_ITEMS.find((c) => c.id === userProfile?.equippedChatTitle);
+    const borderObj = COSMETIC_ITEMS.find((c) => c.id === userProfile?.equippedBorder);
+
     // Dispatch message to Firestore
     onSendMessage({
       text: inputText.trim(),
       userEmail,
-      userName: userNickname || 'Gamer',
-      userAvatar: userAvatar || '🎮',
+      userName: userProfile?.displayName || userNickname || 'Gamer',
+      userAvatar: userProfile?.avatarUrl || userAvatar || '🎮',
       userRole: role,
+      userLevel: uLevel,
+      chatBadgeIcon: chatBadgeObj?.icon || null,
+      chatTitleText: chatTitleObj?.titleText || null,
+      chatColorCss: chatColorObj?.colorCss || null,
+      chatBorderCss: borderObj?.previewCss || null,
       timestamp: new Date().toISOString(),
     });
+
+    if (currentUser?.email) {
+      incrementChatMessageCountInDb(currentUser.email);
+    }
 
     setInputText('');
     setLastSentTimestamp(Date.now());
@@ -549,45 +595,130 @@ export const LiveChatWidget = ({
                 </p>
               </div>
             ) : (
-              messages.map((msg) => {
-                const isMyMessage = msg.userEmail?.toLowerCase() === userEmail.toLowerCase();
+              messages.map((msg, msgIdx) => {
+                const senderEmail = (msg.userEmail || '').toLowerCase();
+                const isMyMessage = senderEmail === userEmail.toLowerCase();
                 const isSys = msg.isSystemMsg;
+                const itemKey = msg.id || `chat-msg-${msgIdx}-${msg.timestamp || Date.now()}`;
 
                 if (isSys) {
                   return (
                     <div
-                      key={msg.id}
-                      className="py-1 px-3 rounded-full bg-purple-950/40 border border-purple-800/30 text-center text-[11px] text-purple-300 font-medium my-1"
+                      key={itemKey}
+                      className="group relative py-1.5 px-3 rounded-2xl bg-purple-950/60 border border-purple-800/40 text-[11px] text-purple-200 font-medium my-1 flex items-center justify-between gap-2 shadow-sm"
                     >
-                      {msg.text}
+                      <span className="flex-1 text-center font-semibold leading-snug">{msg.text}</span>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteMessage(msg.id)}
+                          className="p-1 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-white transition-colors shrink-0"
+                          title="Delete Broadcast / System Message"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      )}
                     </div>
                   );
                 }
 
+                // Look up live profile from real-time userProfilesMap or fallback to userProfile if current user
+                const liveProf = userProfilesMap[senderEmail] || (isMyMessage ? userProfile : null);
+
+                // Synced Profile attributes
+                const msgUserName = liveProf?.displayName || msg.userName || 'Gamer';
+                const msgAvatar = liveProf?.avatarUrl || msg.userAvatar || '🎮';
+
+                // Synced Level calculation
+                const msgXp = liveProf?.xp != null ? liveProf.xp : null;
+                const computedLevel = msgXp != null ? getLevelFromXp(msgXp).level : null;
+                const msgLevel = liveProf?.level || computedLevel || msg.userLevel || 1;
+
+                // Synced Role
+                const msgRole = liveProf?.role || msg.userRole || 'user';
+
+                // Synced Shop Cosmetics
+                const equippedColorId = liveProf?.equippedChatColor || liveProf?.equippedNameColor;
+                const chatColorObj = COSMETIC_ITEMS.find((c) => c.id === equippedColorId);
+                const chatColorCss = chatColorObj?.colorCss || msg.chatColorCss || (msgRole === 'admin' ? 'text-purple-300 font-bold' : 'text-slate-200');
+
+                const equippedBadgeId = liveProf?.equippedChatBadge;
+                const chatBadgeObj = COSMETIC_ITEMS.find((c) => c.id === equippedBadgeId);
+                const chatBadgeIcon = chatBadgeObj?.icon || msg.chatBadgeIcon;
+
+                const equippedTitleId = liveProf?.equippedChatTitle;
+                const chatTitleObj = COSMETIC_ITEMS.find((c) => c.id === equippedTitleId);
+                const chatTitleText = chatTitleObj?.titleText || msg.chatTitleText;
+
+                const equippedBorderId = liveProf?.equippedBorder;
+                const borderObj = COSMETIC_ITEMS.find((c) => c.id === equippedBorderId);
+                const chatBorderCss = borderObj?.previewCss || msg.chatBorderCss || '';
+
                 return (
                   <div
-                    key={msg.id}
+                    key={itemKey}
                     className={`group relative flex space-x-2 items-start ${
                       isMyMessage ? 'flex-row-reverse space-x-reverse' : ''
                     }`}
                   >
-                    {/* User Avatar */}
-                    <div className="w-7 h-7 rounded-xl bg-slate-800 border border-purple-900/50 flex items-center justify-center text-sm shrink-0 shadow-sm">
-                      {msg.userAvatar || '🎮'}
-                    </div>
+                    {/* User Avatar - Clickable with Border Cosmetic */}
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile && onOpenProfile(msg.userEmail)}
+                      className={`w-7 h-7 rounded-xl bg-slate-800 border flex items-center justify-center text-sm shrink-0 shadow-sm hover:scale-105 transition-all cursor-pointer overflow-hidden ${
+                        chatBorderCss ? chatBorderCss : 'border-purple-900/50 hover:border-purple-500'
+                      }`}
+                      title={`View ${msgUserName}'s Profile`}
+                    >
+                      {msgAvatar && (msgAvatar.startsWith('http') || msgAvatar.startsWith('data:')) ? (
+                        <img src={msgAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{msgAvatar || '🎮'}</span>
+                      )}
+                    </button>
 
                     {/* Message Content Bubble */}
-                    <div className={`max-w-[78%] space-y-0.5 ${isMyMessage ? 'items-end' : ''}`}>
-                      <div className="flex items-center space-x-1.5 text-[10px] px-1">
-                        <span className="font-bold text-slate-300 truncate">{msg.userName}</span>
-                        
-                        {msg.userRole === 'admin' && (
-                          <span className="px-1 py-0.2 rounded bg-purple-600 text-white font-black text-[9px] uppercase">
+                    <div className={`max-w-[82%] space-y-0.5 ${isMyMessage ? 'items-end' : ''}`}>
+                      <div className="flex items-center space-x-1.5 text-[10px] px-1 flex-wrap gap-y-0.5">
+                        {/* Clickable Username with Chat Color Cosmetic */}
+                        <button
+                          type="button"
+                          onClick={() => onOpenProfile && onOpenProfile(msg.userEmail)}
+                          className={`font-black hover:underline cursor-pointer truncate ${chatColorCss}`}
+                          title={`View ${msgUserName}'s Profile`}
+                        >
+                          {msgUserName}
+                        </button>
+
+                        {/* Synced Level Badge */}
+                        <span className="px-1.5 py-0.5 rounded bg-purple-950 border border-purple-600/50 text-purple-300 font-black text-[9px] shrink-0 shadow-sm">
+                          Lvl {msgLevel}
+                        </span>
+
+                        {/* Equipped Chat Badge Cosmetic */}
+                        {chatBadgeIcon && (
+                          <span className="text-xs shrink-0 drop-shadow-sm" title="Chat Badge">
+                            {chatBadgeIcon}
+                          </span>
+                        )}
+
+                        {/* Equipped Chat Title Cosmetic */}
+                        {chatTitleText && (
+                          <span className="px-1.5 py-0.5 rounded bg-indigo-900/80 text-indigo-200 font-black text-[9px] shrink-0 shadow-sm">
+                            [{chatTitleText}]
+                          </span>
+                        )}
+
+                        {/* Admin Badge */}
+                        {msgRole === 'admin' && (
+                          <span className="px-1.5 py-0.5 rounded bg-red-600 text-white font-black text-[9px] uppercase shrink-0 shadow-sm">
                             ADMIN
                           </span>
                         )}
 
-                        <span className="text-slate-500">{formatChatTimestamp(msg.timestamp)}</span>
+                        <span className="text-slate-500 text-[9px] shrink-0">
+                          {formatChatTimestamp(msg.timestamp)}
+                        </span>
                       </div>
 
                       <div

@@ -4,7 +4,25 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read, write: if true;
     }
+    match /users/{userId} {
+      allow read, write: if true;
+    }
     match /siteSettings/{settingId} {
+      allow read, write: if true;
+    }
+    match /chatMessages/{msgId} {
+      allow read, write: if true;
+    }
+    match /chatReports/{reportId} {
+      allow read, write: if true;
+    }
+    match /userLogs/{logId} {
+      allow read, write: if true;
+    }
+    match /purchases/{purchaseId} {
+      allow read, write: if true;
+    }
+    match /userReports/{reportId} {
       allow read, write: if true;
     }
     match /{document=**} {
@@ -12,4 +30,3 @@ service cloud.firestore {
     }
   }
 }
-
